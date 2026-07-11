@@ -10,7 +10,7 @@ export default function PortfolioBuilder() {
   const { securities, loading, error } = useCurve();
   const { portfolio, addPosition, removePosition, activePortfolioId, activePortfolioName,
     renamePortfolio, savePortfolio, savedPortfolios, fetchSavedPortfolios, loadPortfolio,
-    deleteSavedPortfolio, clearActivePortfolio } = usePortfolio();
+    deleteSavedPortfolio, clearActivePortfolio, compareIds, toggleCompare } = usePortfolio();
   const { computedPositions, summary } = useResults();
   const { user } = useAuth();
 
@@ -259,17 +259,30 @@ export default function PortfolioBuilder() {
                     {savedPortfolios.map(sp => (
                       <div key={sp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                         padding: '4px 0', borderBottom: '1px solid var(--border-color)' }}>
-                        <button className="font-mono" style={{ fontSize: '10px', color: sp.id === activePortfolioId ? 'var(--brand-color)' : 'var(--text-primary)',
-                          background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', flex: 1 }}
-                          onClick={() => loadPortfolio(sp.id)}>
-                          {sp.portfolio_name} <span style={{ color: 'var(--text-secondary)' }}>({sp.position_count})</span>
-                        </button>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={compareIds.includes(sp.id)}
+                            onChange={() => toggleCompare(sp.id)}
+                            style={{ accentColor: 'var(--brand-color)' }}
+                          />
+                          <button className="font-mono" style={{ fontSize: '10px', color: sp.id === activePortfolioId ? 'var(--brand-color)' : 'var(--text-primary)',
+                            background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                            onClick={() => loadPortfolio(sp.id)}>
+                            {sp.portfolio_name} <span style={{ color: 'var(--text-secondary)' }}>({sp.position_count})</span>
+                          </button>
+                        </label>
                         <button className="font-mono" style={{ fontSize: '10px', color: 'var(--color-error)', background: 'none',
                           border: 'none', cursor: 'pointer' }}
                           onClick={() => deleteSavedPortfolio(sp.id)}>DEL</button>
                       </div>
                     ))}
                   </div>
+                )}
+                {compareIds.length >= 2 && (
+                  <a href="/compare" className="btn font-mono" style={{ fontSize: '10px', width: '100%', textAlign: 'center', textDecoration: 'none' }}>
+                    COMPARE {compareIds.length} PORTFOLIOS
+                  </a>
                 )}
               </>
             )}

@@ -45,6 +45,9 @@ export default function RootLayout({
                         <Link href="/portfolio" className="nav-link">
                           Portfolio Builder
                         </Link>
+                        <Link href="/compare" className="nav-link">
+                          Compare
+                        </Link>
                         <Link href="/curve" className="nav-link">
                           Curve Explorer
                         </Link>

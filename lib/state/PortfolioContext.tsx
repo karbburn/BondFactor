@@ -32,6 +32,9 @@ interface PortfolioContextType {
   fetchSavedPortfolios: () => Promise<void>;
   deleteSavedPortfolio: (portfolioId: string) => Promise<void>;
   clearActivePortfolio: () => void;
+  compareIds: string[];
+  toggleCompare: (id: string) => void;
+  clearCompare: () => void;
 }
 
 const PortfolioContext = createContext<PortfolioContextType | null>(null);
@@ -56,7 +59,14 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [savedPortfolios, setSavedPortfolios] = useState<SavedPortfolio[]>([]);
   const [activePortfolioId, setActivePortfolioId] = useState<string | null>(null);
   const [activePortfolioName, setActivePortfolioName] = useState<string>("Untitled Portfolio");
+  const [compareIds, setCompareIds] = useState<string[]>([]);
   const { securities } = useCurve();
+
+  const toggleCompare = useCallback((id: string) => {
+    setCompareIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }, []);
+
+  const clearCompare = useCallback(() => { setCompareIds([]); }, []);
 
   const addPosition = useCallback((security: SecurityItem, faceValue: number) => {
     setPortfolioState(prev => {
@@ -155,6 +165,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       portfolio, savedPortfolios, activePortfolioId, activePortfolioName,
       addPosition, removePosition, updatePosition, setPortfolio, renamePortfolio,
       savePortfolio, loadPortfolio, fetchSavedPortfolios, deleteSavedPortfolio, clearActivePortfolio,
+      compareIds, toggleCompare, clearCompare,
     }}>
       {children}
     </PortfolioContext.Provider>

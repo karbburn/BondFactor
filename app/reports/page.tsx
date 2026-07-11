@@ -11,8 +11,7 @@ export default function ReportsStub() {
           &gt; Risk Report Generator
         </h2>
         <p className="font-mono" style={{ fontSize: '13px', lineHeight: '1.6', color: 'var(--text-secondary)' }}>
-          This interface is scheduled for deployment in **Phase 2** (Milestone 2).
-          Once active, it will invoke background PDF reports and spreadsheet exports on your active portfolio, tracking scenario shocks and KRD buckets, powered by the backend celery worker queue.
+          This feature is under development. Once active, it will generate PDF reports and spreadsheet exports on your active portfolio, tracking scenario shocks and KRD buckets.
         </p>
         <div style={{ marginTop: '25px' }}>
           <Link href="/" className="btn font-mono">

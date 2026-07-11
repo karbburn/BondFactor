@@ -121,7 +121,7 @@ def test_generate_cashflows_structure():
     assert cashflows[1]["amount"] == 103.0 # 3.0 coupon + 100 principal
     assert cashflows[1]["type"] == "both"
 
-# Stage 4 Curve Fitting Tests
+# Curve Fitting Tests
 
 import numpy as np
 from quant_core.nss import nss_yield, calibrate_nss
@@ -234,7 +234,7 @@ def test_calibration_validation_and_fallback():
     assert pytest.approx(res_bad.curve_fn(3.0), abs=1e-11) == 95.0
 
 
-# Stage 5 Pricing and Risk Core Tests
+# Pricing and Risk Core Tests
 
 from quant_core import pricing, risk
 
@@ -329,7 +329,7 @@ def test_gsec_pricing_and_risk():
     assert 15.0 < conv < 30.0
 
 
-# Stage 6 Scenario and KRD Engines Tests
+# Scenario and KRD Engines Tests
 
 from quant_core.scenario import apply_scenario_shocks, get_shocked_zero_curve
 from quant_core.krd import calculate_key_rate_durations

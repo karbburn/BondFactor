@@ -11,8 +11,7 @@ export default function SavedPortfoliosStub() {
           &gt; Saved Portfolio Manager
         </h2>
         <p className="font-mono" style={{ fontSize: '13px', lineHeight: '1.6', color: 'var(--text-secondary)' }}>
-          This interface is scheduled for deployment in **Phase 2** (auth-gated database storage).
-          Once active, it will allow saving, naming, and grouping custom portfolios on the cloud, leveraging Supabase database triggers.
+          This feature is under development. Once active, it will allow saving, naming, and grouping custom portfolios on the cloud with authenticated access.
         </p>
         <div style={{ marginTop: '25px' }}>
           <Link href="/" className="btn font-mono">

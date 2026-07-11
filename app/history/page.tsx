@@ -11,8 +11,7 @@ export default function HistoryStub() {
           &gt; Historical Replay Explorer
         </h2>
         <p className="font-mono" style={{ fontSize: '13px', lineHeight: '1.6', color: 'var(--text-secondary)' }}>
-          This interface is scheduled for deployment in **Phase 2** (Milestone 2). 
-          Once active, it will query the FastAPI backend historical endpoint (`GET /api/v1/curves/history`) to replay curve movements, calibration residuals, and portfolio-level risk sensitivities over historical date ranges.
+          This feature is under development. Once active, it will query the backend historical endpoint to replay curve movements, calibration residuals, and portfolio-level risk sensitivities over historical date ranges.
         </p>
         <div style={{ marginTop: '25px' }}>
           <Link href="/" className="btn font-mono">

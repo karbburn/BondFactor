@@ -199,10 +199,10 @@ export default function PortfolioBuilder() {
 
           <div style={{ marginTop: '25px', borderTop: '1px solid var(--border-color)', paddingTop: '15px' }}>
             <span className="font-mono text-brand" style={{ fontSize: '11px', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
-              PHASE 2 COMPILATION:
+              CLOUD PERSISTENCE:
             </span>
             <button className="btn btn-secondary font-mono" style={{ width: '100%', fontSize: '11px', color: 'var(--text-secondary)', cursor: 'not-allowed' }} disabled>
-              [SAVE PORTFOLIO TO CLOUD]
+              [SAVE PORTFOLIO TO CLOUD — COMING SOON]
             </button>
           </div>
         </div>

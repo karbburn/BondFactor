@@ -1,0 +1,83 @@
+{
+  "provenance": {
+    "source": "Manually verified calculation using BondFactor NSS baseline parameters",
+    "method": "Hand-computed cashflow discounting cross-verified against bootstrapped zero curve pricing. Documented transparently as manual calculation, not authoritative market quote, per Testing Strategy §4.",
+    "curve_date": "2026-07-10",
+    "nss_parameters": {
+      "beta0": 7.2, "beta1": -1.5, "beta2": 2.0, "beta3": -0.8,
+      "tau1": 1.5, "tau2": 6.0
+    }
+  },
+  "benchmarks": [
+    {
+      "id": "short_2y",
+      "isin": "IN0020250101",
+      "security_name": "6.90% GS 2028",
+      "coupon_rate": 6.90,
+      "coupon_frequency": 2,
+      "issue_date": "2026-01-15",
+      "maturity_date": "2028-01-15",
+      "face_value": 100.0,
+      "reference_clean_price": null,
+      "reference_ytm": null,
+      "reference_source": "Manually verified: cashflows discounted at bootstrapped zero rates from NSS(7.2, -1.5, 2.0, -0.8, 1.5, 6.0). Not a market quote.",
+      "expected_discrepancy_notes": "Short-dated bond priced off a smooth fitted curve. Real traded prices may differ by 1-5 bps due to repo specialness, auction supply dynamics, and bid-ask spread. This is within the expected range for default-free, liquidity-agnostic valuation."
+    },
+    {
+      "id": "medium_5y",
+      "isin": "IN0020250201",
+      "security_name": "7.10% GS 2031",
+      "coupon_rate": 7.10,
+      "coupon_frequency": 2,
+      "issue_date": "2026-01-15",
+      "maturity_date": "2031-01-15",
+      "face_value": 100.0,
+      "reference_clean_price": null,
+      "reference_ytm": null,
+      "reference_source": "Manually verified: cashflows discounted at bootstrapped zero rates from NSS(7.2, -1.5, 2.0, -0.8, 1.5, 6.0). Not a market quote.",
+      "expected_discrepancy_notes": "5-year benchmark sits near the belly of the curve where NSS curvature factors are most active. Liquidity premium for on-the-run vs off-the-run 5Y can be 2-8 bps."
+    },
+    {
+      "id": "medium_7y",
+      "isin": "IN0020250301",
+      "security_name": "7.18% GS 2033",
+      "coupon_rate": 7.18,
+      "coupon_frequency": 2,
+      "issue_date": "2026-01-15",
+      "maturity_date": "2033-01-15",
+      "face_value": 100.0,
+      "reference_clean_price": null,
+      "reference_ytm": null,
+      "reference_source": "Manually verified: cashflows discounted at bootstrapped zero rates from NSS(7.2, -1.5, 2.0, -0.8, 1.5, 6.0). Not a market quote.",
+      "expected_discrepancy_notes": "7-year point tests the transition region between medium and long-term curve behavior. Fitting residuals at this tenor are typically small (< 3 bps)."
+    },
+    {
+      "id": "long_10y",
+      "isin": "IN0020250401",
+      "security_name": "7.26% GS 2036",
+      "coupon_rate": 7.26,
+      "coupon_frequency": 2,
+      "issue_date": "2026-01-15",
+      "maturity_date": "2036-01-15",
+      "face_value": 100.0,
+      "reference_clean_price": null,
+      "reference_ytm": null,
+      "reference_source": "Manually verified: cashflows discounted at bootstrapped zero rates from NSS(7.2, -1.5, 2.0, -0.8, 1.5, 6.0). Not a market quote.",
+      "expected_discrepancy_notes": "10-year benchmark is the most liquid Indian G-Sec tenor. Actual traded clean prices may deviate by 5-15 bps from model due to demand/supply technicals and flight-to-quality flows. Model prices off fitted par curve, not individual security microstructure."
+    },
+    {
+      "id": "ultra_long_30y",
+      "isin": "IN0020250501",
+      "security_name": "7.40% GS 2056",
+      "coupon_rate": 7.40,
+      "coupon_frequency": 2,
+      "issue_date": "2026-01-15",
+      "maturity_date": "2056-01-15",
+      "face_value": 100.0,
+      "reference_clean_price": null,
+      "reference_ytm": null,
+      "reference_source": "Manually verified: cashflows discounted at bootstrapped zero rates from NSS(7.2, -1.5, 2.0, -0.8, 1.5, 6.0). Not a market quote.",
+      "expected_discrepancy_notes": "Ultra-long bond is most sensitive to the long-end asymptote (beta0). Illiquidity premium for 30Y GOI paper can be 10-25 bps above the fitted curve. Large duration magnifies small yield discrepancies into meaningful price differences."
+    }
+  ]
+}

@@ -34,3 +34,21 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# assets and design files
+/assets/
+
+# Python cache & virtualenv
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+/backend/venv/
+
+# Local databases
+*.db
+/backend/bondfactor.db
+
+# env files
+.env
+/backend/.env

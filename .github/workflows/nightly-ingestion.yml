@@ -1,0 +1,28 @@
+name: Nightly G-Sec Ingestion & Calibration
+
+on:
+  schedule:
+    # Run daily at 14:00 UTC (7:30 PM IST), shortly after typical FBIL daily publication time
+    - cron: '0 14 * * 1-5'
+  workflow_dispatch:
+    # Allows manual trigger of the ingestion job from the GitHub Actions UI
+
+jobs:
+  trigger-ingestion:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Backend Ingestion Endpoint
+        run: |
+          echo "Triggering ingestion on deployed backend..."
+          # The backend base URL is retrieved from GitHub Secrets (e.g., API_BASE_URL)
+          # The request is authenticated using INTERNAL_SERVICE_KEY
+          curl -X POST "${{ secrets.API_BASE_URL }}/api/v1/internal/ingestion/trigger" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.INTERNAL_SERVICE_KEY }}" \
+            --fail-with-body
+        
+      - name: Report Status
+        if: failure()
+        run: |
+          echo "Error: Ingestion run failed. Check backend logs and GHA logs."
+          # Place failure notifications (e.g., webhook to Slack/Discord/Email) here in later phases

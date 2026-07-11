@@ -1,0 +1,62 @@
+{
+  "baseline_nss": {
+    "beta0": 7.2,
+    "beta1": -1.5,
+    "beta2": 2.0,
+    "beta3": -0.8,
+    "tau1": 1.5,
+    "tau2": 6.0
+  },
+  "scenarios": [
+    {
+      "name": "Upward Parallel Shift",
+      "shocks": {
+        "parallel_shift": 0.5,
+        "slope_shock": 0.0,
+        "curvature1_shock": 0.0,
+        "curvature2_shock": 0.0,
+        "twist_shock": 0.0,
+        "twist_pivot": 5.0
+      }
+    },
+    {
+      "name": "Steepener and Twist",
+      "shocks": {
+        "parallel_shift": 0.0,
+        "slope_shock": 0.3,
+        "curvature1_shock": -0.2,
+        "curvature2_shock": 0.1,
+        "twist_shock": -0.4,
+        "twist_pivot": 5.0
+      }
+    }
+  ],
+  "trade_dates": [
+    "2026-04-10",
+    "2026-06-30"
+  ],
+  "portfolio": [
+    {
+      "id": "regular_gsec_10y",
+      "issue_date": "2025-01-15",
+      "maturity_date": "2035-01-15",
+      "coupon_rate": 7.0,
+      "face_value": 100.0
+    },
+    {
+      "id": "odd_first_gsec_10y",
+      "issue_date": "2025-04-10",
+      "maturity_date": "2035-06-15",
+      "coupon_rate": 7.5,
+      "face_value": 100.0
+    },
+    {
+      "id": "zero_coupon_5y",
+      "issue_date": "2025-01-15",
+      "maturity_date": "2030-01-15",
+      "coupon_rate": 0.0,
+      "face_value": 100.0
+    }
+  ],
+  "key_tenors": [0.25, 0.5, 1.0, 2.0, 3.0, 5.0, 7.0, 10.0, 15.0, 20.0, 30.0, 40.0]
+}

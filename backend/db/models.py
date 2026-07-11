@@ -94,3 +94,17 @@ class PortfolioPosition(Base):
     face_value_held = Column(Numeric, nullable=False)
     position_type = Column(String, nullable=False, default="long")
     added_at = Column(DateTime(timezone=True), nullable=False)
+
+class ReportGeneration(Base):
+    __tablename__ = "report_generations"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), nullable=False, index=True)
+    portfolio_id = Column(String(36), ForeignKey("portfolios.id"), nullable=False)
+    format = Column(String, nullable=False)  # 'pdf' | 'xlsx'
+    scenario_config = Column(JSON, nullable=False)
+    status = Column(String, nullable=False, default="processing")  # 'processing' | 'completed' | 'failed'
+    storage_path = Column(String, nullable=True)
+    error_message = Column(String, nullable=True)
+    generated_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False)

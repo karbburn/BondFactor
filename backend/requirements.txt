@@ -7,3 +7,5 @@ pytest
 requests
 anyio
 PyJWT
+fpdf2
+openpyxl

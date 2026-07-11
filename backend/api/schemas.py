@@ -95,3 +95,22 @@ class ZeroCurvePoint(BaseModel):
     tenor_years: float
     zero_rate: float
     discount_factor: float
+
+class ScenarioConfig(BaseModel):
+    name: str = "Base Scenario"
+    parallel_shift: float = 0.0
+    slope_shock: float = 0.0
+    curvature1_shock: float = 0.0
+    curvature2_shock: float = 0.0
+    twist_shock: float = 0.0
+    twist_pivot: float = 5.0
+
+class ReportGenerateRequest(BaseModel):
+    portfolio_id: str
+    format: str  # 'pdf' | 'xlsx'
+    scenarios: List[ScenarioConfig]
+
+class ReportResponse(BaseModel):
+    report_id: str
+    status: str
+    download_url: Optional[str] = None

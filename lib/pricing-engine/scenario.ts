@@ -47,9 +47,9 @@ export function applyScenarioShocks(
   const deltaBeta0Twist = -twistShock * g1Pivot;
 
   let newBeta0 = beta0 + parallelShift + deltaBeta0Twist;
-  let newBeta1 = beta1 + slopeShock + twistShock;
-  let newBeta2 = beta2 + curvature1Shock;
-  let newBeta3 = beta3 + curvature2Shock;
+  const newBeta1 = beta1 + slopeShock + twistShock;
+  const newBeta2 = beta2 + curvature1Shock;
+  const newBeta3 = beta3 + curvature2Shock;
 
   // Clamp level parameter beta0
   newBeta0 = Math.max(0.0, Math.min(25.0, newBeta0));

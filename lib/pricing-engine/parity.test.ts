@@ -7,7 +7,7 @@ import { generateCashflows } from "./cashflow";
 import { bootstrapZeroCurve } from "./bootstrap";
 import { calculateDirtyPrice, calculateCleanPrice, calculateYtm } from "./pricing";
 import { calculateMacaulayDuration, calculateModifiedDuration, calculateDv01, calculateConvexity } from "./risk";
-import { applyScenarioShocks, getShockedZeroCurve, nssYield } from "./scenario";
+import { getShockedZeroCurve, nssYield } from "./scenario";
 import { calculateKeyRateDurations } from "./krd";
 
 const fixturesPath = path.resolve(__dirname, "../../backend/tests/fixtures/parity_fixtures.json");

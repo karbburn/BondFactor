@@ -84,3 +84,14 @@ class PositionResponse(BaseModel):
     added_at: str
 
 PortfolioDetail.model_rebuild()
+
+class ArchivedDateItem(BaseModel):
+    curve_date: date
+    model_type: str
+    validation_status: str
+    point_count: int
+
+class ZeroCurvePoint(BaseModel):
+    tenor_years: float
+    zero_rate: float
+    discount_factor: float

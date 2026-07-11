@@ -86,5 +86,12 @@ def run_ingestion(date: str, db: Session) -> RawObservationBatch:
     status = "manual_override" if result.source == "manual_csv" else "success"
     persist_raw_observations(db, result, status)
     logger.info(f"Successfully completed ingestion and persistence of {len(result.observations)} points from source '{result.source}' for date {date}")
-    
+
+    # 7. Archive zero curve for this date
+    try:
+        from jobs.archive_zero_curve import archive_zero_curve
+        archive_zero_curve(db, datetime.strptime(date, "%Y-%m-%d").date())
+    except Exception as e:
+        logger.warning(f"Zero curve archival failed for {date}: {e}")
+
     return result

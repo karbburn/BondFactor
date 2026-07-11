@@ -4,8 +4,8 @@ from datetime import date
 from typing import List, Optional
 
 from db.session import get_db
-from db.models import CurveCalibration, KeyRateTenorGrid
-from api.schemas import CurveResponse, CurveSummary, KeyRateTenorResponse, TenorItem, NSSParametersSchema, CurveDiagnostics
+from db.models import CurveCalibration, KeyRateTenorGrid, ReferenceZeroCurve
+from api.schemas import CurveResponse, CurveSummary, KeyRateTenorResponse, TenorItem, NSSParametersSchema, CurveDiagnostics, ArchivedDateItem, ZeroCurvePoint
 
 router = APIRouter()
 
@@ -90,6 +90,57 @@ def get_key_rate_tenors(db: Session = Depends(get_db)):
         effective_date=effective_date,
         tenors=[TenorItem(label=t.tenor_label, years=float(t.tenor_years)) for t in tenors]
     )
+
+@router.get("/curves/history/dates", response_model=List[ArchivedDateItem])
+def get_archived_dates(db: Session = Depends(get_db)):
+    """Returns all dates that have archived zero curve data."""
+    rows = (
+        db.query(
+            CurveCalibration.curve_date,
+            CurveCalibration.model_type,
+            CurveCalibration.validation_status,
+        )
+        .join(ReferenceZeroCurve, ReferenceZeroCurve.calibration_id == CurveCalibration.id)
+        .filter(CurveCalibration.is_active == True)
+        .distinct()
+        .order_by(CurveCalibration.curve_date.desc())
+        .all()
+    )
+    result = []
+    for curve_date, model_type, validation_status in rows:
+        count = db.query(ReferenceZeroCurve).filter(
+            ReferenceZeroCurve.curve_date == curve_date
+        ).count()
+        result.append(ArchivedDateItem(
+            curve_date=curve_date,
+            model_type=model_type,
+            validation_status=validation_status,
+            point_count=count,
+        ))
+    return result
+
+@router.get("/curves/{date_val}/zero-curve", response_model=List[ZeroCurvePoint])
+def get_zero_curve_by_date(date_val: date, db: Session = Depends(get_db)):
+    """Returns the bootstrapped zero curve points for a specific date."""
+    points = (
+        db.query(ReferenceZeroCurve)
+        .filter(ReferenceZeroCurve.curve_date == date_val)
+        .order_by(ReferenceZeroCurve.tenor_years.asc())
+        .all()
+    )
+    if not points:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No archived zero curve data found for date {date_val}."
+        )
+    return [
+        ZeroCurvePoint(
+            tenor_years=float(p.tenor_years),
+            zero_rate=float(p.zero_rate),
+            discount_factor=float(p.discount_factor),
+        )
+        for p in points
+    ]
 
 def format_curve_response(calibration: CurveCalibration) -> CurveResponse:
     parameters = None

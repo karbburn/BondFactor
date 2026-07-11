@@ -25,7 +25,7 @@ def fetch(date: str) -> Union[RawObservationBatch, FetchFailure]:
     """
     url = os.getenv("FBIL_ENDPOINT_URL")
     
-    # ponytail: Return FetchFailure by default since FBIL has active reCAPTCHA and SPA blocks.
+    # Return FetchFailure by default since FBIL has active reCAPTCHA and SPA blocks.
     # Allow fetching if a mock endpoint is explicitly set in FBIL_ENDPOINT_URL (e.g. for testing).
     if not url or url.startswith("https://fbil.org.in"):
         return FetchFailure(

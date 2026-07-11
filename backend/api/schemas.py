@@ -48,3 +48,39 @@ class SecurityResponse(BaseModel):
     face_value: float
     benchmark_tenor_classification: Optional[str] = None
     is_active: bool
+
+# Portfolio schemas
+class PortfolioCreate(BaseModel):
+    portfolio_name: str
+
+class PortfolioUpdate(BaseModel):
+    portfolio_name: str
+
+class PortfolioSummary(BaseModel):
+    id: str
+    portfolio_name: str
+    position_count: int
+    created_at: str
+    updated_at: str
+
+class PortfolioDetail(BaseModel):
+    id: str
+    portfolio_name: str
+    created_at: str
+    updated_at: str
+    positions: List["PositionResponse"]
+
+class PositionCreate(BaseModel):
+    security_id: str
+    face_value_held: float
+
+class PositionResponse(BaseModel):
+    id: str
+    security_id: str
+    isin: str
+    security_name: str
+    face_value_held: float
+    position_type: str
+    added_at: str
+
+PortfolioDetail.model_rebuild()

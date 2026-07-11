@@ -112,13 +112,9 @@ def test_missing_env_var_returns_500(monkeypatch):
     import asyncio
     from fastapi import HTTPException
     monkeypatch.setenv("SUPABASE_JWT_SECRET", "")
-    # Re-import to pick up the empty env
-    import importlib
-    import api.dependencies as dep_mod
-    monkeypatch.setattr(dep_mod, "SUPABASE_JWT_SECRET", "")
     token = _make_token()
     with pytest.raises(HTTPException) as exc_info:
         asyncio.get_event_loop().run_until_complete(
-            dep_mod.get_current_user(authorization=f"Bearer {token}")
+            get_current_user(authorization=f"Bearer {token}")
         )
     assert exc_info.value.status_code == 500

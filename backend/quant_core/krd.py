@@ -11,7 +11,7 @@ class KRD_PerturbedZeroCurve:
     Decorator class that center-bumps zero rates by 1bp (0.01%) at a given key tenor,
     tapering linearly to zero at neighboring key tenors.
     
-    # ponytail: Tapered zero curve perturbation decorator. Exposes continuously bumped rates
+    # Tapered zero curve perturbation decorator. Exposes continuously bumped rates
     # without discretizing or altering the underlying ZeroCurve grid.
     """
     def __init__(self, base_zc: ZeroCurve, key_tenors: List[float], key_idx: int):

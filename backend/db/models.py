@@ -75,3 +75,22 @@ class Security(Base):
     face_value = Column(Numeric, nullable=False, default=100.0)
     benchmark_tenor_classification = Column(String, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
+
+class Portfolio(Base):
+    __tablename__ = "portfolios"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), nullable=False, index=True)
+    portfolio_name = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
+
+class PortfolioPosition(Base):
+    __tablename__ = "portfolio_positions"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    portfolio_id = Column(String(36), ForeignKey("portfolios.id"), nullable=False, index=True)
+    security_id = Column(String(36), ForeignKey("securities.id"), nullable=False)
+    face_value_held = Column(Numeric, nullable=False)
+    position_type = Column(String, nullable=False, default="long")
+    added_at = Column(DateTime(timezone=True), nullable=False)

@@ -10,7 +10,7 @@ def fetch(date: str) -> Union[RawObservationBatch, FetchFailure]:
     """
     url = os.getenv("DBIE_ENDPOINT_URL")
     
-    # ponytail: Return FetchFailure by default since DBIE requires session-based queries.
+    # Return FetchFailure by default since DBIE requires session-based queries.
     # Allow fetching if a mock endpoint is explicitly set in DBIE_ENDPOINT_URL (e.g. for testing).
     if not url or url.startswith("https://dbie.rbi.org.in"):
         return FetchFailure(

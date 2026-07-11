@@ -3,9 +3,6 @@ import jwt
 from fastapi import Header, HTTPException
 from typing import Dict
 
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
-
-
 async def get_current_user(authorization: str = Header(None)) -> Dict:
     """Validates a Supabase-issued Bearer token and returns the user payload.
 
@@ -19,8 +16,9 @@ async def get_current_user(authorization: str = Header(None)) -> Dict:
         )
 
     token = authorization.split(" ", 1)[1]
+    secret = os.getenv("SUPABASE_JWT_SECRET", "")
 
-    if not SUPABASE_JWT_SECRET:
+    if not secret:
         raise HTTPException(
             status_code=500,
             detail={"code": "INTERNAL_SERVER_ERROR", "message": "SUPABASE_JWT_SECRET is not configured."},
@@ -29,7 +27,7 @@ async def get_current_user(authorization: str = Header(None)) -> Dict:
     try:
         payload = jwt.decode(
             token,
-            SUPABASE_JWT_SECRET,
+            secret,
             algorithms=["HS256"],
             audience="authenticated",
         )

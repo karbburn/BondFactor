@@ -1,17 +1,26 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCurve } from '../../lib/state/CurveContext';
 import { usePortfolio } from '../../lib/state/PortfolioContext';
 import { useResults } from '../../lib/state/ResultsContext';
+import { useAuth } from '../../lib/state/AuthContext';
 
 export default function PortfolioBuilder() {
   const { securities, loading, error } = useCurve();
-  const { portfolio, addPosition, removePosition } = usePortfolio();
+  const { portfolio, addPosition, removePosition, activePortfolioId, activePortfolioName,
+    renamePortfolio, savePortfolio, savedPortfolios, fetchSavedPortfolios, loadPortfolio,
+    deleteSavedPortfolio, clearActivePortfolio } = usePortfolio();
   const { computedPositions, summary } = useResults();
+  const { user } = useAuth();
 
   const [selectedIsin, setSelectedIsin] = useState('');
   const [faceValue, setFaceValue] = useState(10000000); // Default 1 Cr
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
+  const [editName, setEditName] = useState(false);
+
+  useEffect(() => { if (user) fetchSavedPortfolios(); }, [user, fetchSavedPortfolios]);
 
   // Filter out securities that are already in the portfolio or expired
   const availableSecurities = useMemo(() => {
@@ -197,13 +206,73 @@ export default function PortfolioBuilder() {
             </form>
           )}
 
+          {/* Cloud Persistence Panel */}
           <div style={{ marginTop: '25px', borderTop: '1px solid var(--border-color)', paddingTop: '15px' }}>
             <span className="font-mono text-brand" style={{ fontSize: '11px', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
               CLOUD PERSISTENCE:
             </span>
-            <button className="btn btn-secondary font-mono" style={{ width: '100%', fontSize: '11px', color: 'var(--text-secondary)', cursor: 'not-allowed' }} disabled>
-              [SAVE PORTFOLIO TO CLOUD — COMING SOON]
-            </button>
+
+            {!user ? (
+              <div className="font-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                Log in to save portfolios to the cloud.
+              </div>
+            ) : (
+              <>
+                {/* Portfolio name + save */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                  {editName ? (
+                    <input
+                      className="form-input font-mono" style={{ flex: 1, fontSize: '11px' }}
+                      value={activePortfolioName}
+                      onChange={e => renamePortfolio(e.target.value)}
+                      onBlur={() => setEditName(false)}
+                      onKeyDown={e => e.key === 'Enter' && setEditName(false)}
+                      autoFocus
+                    />
+                  ) : (
+                    <button className="btn btn-secondary font-mono" style={{ flex: 1, fontSize: '11px', textAlign: 'left' }}
+                      onClick={() => setEditName(true)}>
+                      {activePortfolioName} ✎
+                    </button>
+                  )}
+                  <button
+                    className="btn font-mono" style={{ fontSize: '11px', minWidth: '80px' }}
+                    disabled={saving || portfolio.length === 0}
+                    onClick={async () => {
+                      setSaving(true); setSaveMsg('');
+                      try { await savePortfolio(); setSaveMsg('Saved.'); }
+                      catch (e: unknown) { setSaveMsg(e instanceof Error ? e.message : 'Error.'); }
+                      setSaving(false);
+                    }}>
+                    {saving ? '...' : activePortfolioId ? 'UPDATE' : 'SAVE'}
+                  </button>
+                </div>
+                {saveMsg && <div className="font-mono" style={{ fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{saveMsg}</div>}
+                {activePortfolioId && (
+                  <button className="btn btn-secondary font-mono" style={{ fontSize: '10px', width: '100%', marginBottom: '10px' }}
+                    onClick={clearActivePortfolio}>NEW PORTFOLIO</button>
+                )}
+
+                {/* Saved list */}
+                {savedPortfolios.length > 0 && (
+                  <div style={{ maxHeight: '120px', overflowY: 'auto', marginBottom: '8px' }}>
+                    {savedPortfolios.map(sp => (
+                      <div key={sp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '4px 0', borderBottom: '1px solid var(--border-color)' }}>
+                        <button className="font-mono" style={{ fontSize: '10px', color: sp.id === activePortfolioId ? 'var(--brand-color)' : 'var(--text-primary)',
+                          background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', flex: 1 }}
+                          onClick={() => loadPortfolio(sp.id)}>
+                          {sp.portfolio_name} <span style={{ color: 'var(--text-secondary)' }}>({sp.position_count})</span>
+                        </button>
+                        <button className="font-mono" style={{ fontSize: '10px', color: 'var(--color-error)', background: 'none',
+                          border: 'none', cursor: 'pointer' }}
+                          onClick={() => deleteSavedPortfolio(sp.id)}>DEL</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 

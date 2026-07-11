@@ -11,7 +11,7 @@ def get_settlement_date(trade_date: date) -> date:
     Returns the settlement date (T+1 business days) for a given trade date.
     Excludes weekends (Saturdays and Sundays).
     
-    # ponytail: Weekend-aware settlement. Ignored Indian national holidays since no calendar is loaded.
+    # Weekend-aware settlement. Ignored Indian national holidays since no calendar is loaded.
     # Upgrade path: Integrate a holiday library or load holiday dates from DB when scaling.
     """
     weekday = trade_date.weekday()  # 0 = Monday, 6 = Sunday

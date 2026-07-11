@@ -1,14 +1,17 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
-interface ScenarioContextType {
+interface ScenarioValues {
   parallelShift: number;
   slopeShock: number;
   curvature1Shock: number;
   curvature2Shock: number;
   twistShock: number;
   twistPivot: number;
+}
+
+interface ScenarioContextType extends ScenarioValues {
   setParallelShift: (v: number) => void;
   setSlopeShock: (v: number) => void;
   setCurvature1Shock: (v: number) => void;
@@ -16,6 +19,7 @@ interface ScenarioContextType {
   setTwistShock: (v: number) => void;
   setTwistPivot: (v: number) => void;
   resetScenarios: () => void;
+  loadScenario: (s: ScenarioValues) => void;
 }
 
 const ScenarioContext = createContext<ScenarioContextType | null>(null);
@@ -28,31 +32,32 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
   const [twistShock, setTwistShock] = useState(0.0);
   const [twistPivot, setTwistPivot] = useState(5.0);
 
-  const resetScenarios = () => {
+  const resetScenarios = useCallback(() => {
     setParallelShift(0.0);
     setSlopeShock(0.0);
     setCurvature1Shock(0.0);
     setCurvature2Shock(0.0);
     setTwistShock(0.0);
     setTwistPivot(5.0);
-  };
+  }, []);
+
+  const loadScenario = useCallback((s: ScenarioValues) => {
+    setParallelShift(s.parallelShift);
+    setSlopeShock(s.slopeShock);
+    setCurvature1Shock(s.curvature1Shock);
+    setCurvature2Shock(s.curvature2Shock);
+    setTwistShock(s.twistShock);
+    setTwistPivot(s.twistPivot);
+  }, []);
 
   return (
     <ScenarioContext.Provider
       value={{
-        parallelShift,
-        slopeShock,
-        curvature1Shock,
-        curvature2Shock,
-        twistShock,
-        twistPivot,
-        setParallelShift,
-        setSlopeShock,
-        setCurvature1Shock,
-        setCurvature2Shock,
-        setTwistShock,
-        setTwistPivot,
-        resetScenarios
+        parallelShift, slopeShock, curvature1Shock, curvature2Shock,
+        twistShock, twistPivot,
+        setParallelShift, setSlopeShock, setCurvature1Shock,
+        setCurvature2Shock, setTwistShock, setTwistPivot,
+        resetScenarios, loadScenario,
       }}
     >
       {children}

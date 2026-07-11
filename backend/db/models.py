@@ -108,3 +108,17 @@ class ReportGeneration(Base):
     error_message = Column(String, nullable=True)
     generated_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False)
+
+class SavedScenario(Base):
+    __tablename__ = "saved_scenarios"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), nullable=False, index=True)
+    scenario_name = Column(String, nullable=False)
+    parallel_shift = Column(Numeric, nullable=False, default=0.0)
+    slope_shock = Column(Numeric, nullable=False, default=0.0)
+    curvature1_shock = Column(Numeric, nullable=False, default=0.0)
+    curvature2_shock = Column(Numeric, nullable=False, default=0.0)
+    twist_shock = Column(Numeric, nullable=False, default=0.0)
+    twist_pivot = Column(Numeric, nullable=False, default=5.0)
+    created_at = Column(DateTime(timezone=True), nullable=False)

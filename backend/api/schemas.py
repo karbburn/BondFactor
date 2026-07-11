@@ -114,3 +114,23 @@ class ReportResponse(BaseModel):
     report_id: str
     status: str
     download_url: Optional[str] = None
+
+class SavedScenarioCreate(BaseModel):
+    scenario_name: str
+    parallel_shift: float = 0.0
+    slope_shock: float = 0.0
+    curvature1_shock: float = 0.0
+    curvature2_shock: float = 0.0
+    twist_shock: float = 0.0
+    twist_pivot: float = 5.0
+
+class SavedScenarioResponse(BaseModel):
+    id: str
+    scenario_name: str
+    parallel_shift: float
+    slope_shock: float
+    curvature1_shock: float
+    curvature2_shock: float
+    twist_shock: float
+    twist_pivot: float
+    created_at: str

@@ -128,6 +128,13 @@ Open [http://localhost:3000](http://localhost:3000).
 | `DELETE` | `/api/v1/portfolios/{id}` | Delete portfolio + positions |
 | `POST` | `/api/v1/portfolios/{id}/positions` | Add position |
 | `DELETE` | `/api/v1/portfolios/{id}/positions/{pid}` | Remove position |
+| `GET` | `/api/v1/scenarios/saved` | List user's saved scenarios |
+| `POST` | `/api/v1/scenarios/saved` | Create saved scenario |
+| `GET` | `/api/v1/scenarios/saved/{id}` | Get saved scenario |
+| `DELETE` | `/api/v1/scenarios/saved/{id}` | Delete saved scenario |
+| `POST` | `/api/v1/reports/generate` | Generate PDF/Excel report (async) |
+| `GET` | `/api/v1/reports/{id}` | Poll report generation status |
+| `GET` | `/api/v1/reports/{id}/download` | Download completed report |
 
 ## Project Structure
 
@@ -138,8 +145,9 @@ BondFactor/
 │   ├── portfolios/               # Saved portfolio manager
 │   ├── curve/                    # Curve explorer
 │   ├── validate/                 # Pricing validation
-│   ├── history/                  # Historical replay (Phase 2)
-│   ├── reports/                  # Report generation (Phase 2)
+│   ├── history/                  # Historical replay
+│   ├── reports/                  # Report generation
+│   ├── compare/                  # Multi-portfolio comparison
 │   └── login/                    # Authentication
 ├── lib/
 │   ├── pricing-engine/           # TypeScript pricing core (parity-tested)
@@ -148,7 +156,7 @@ BondFactor/
 │   └── components/               # Shared UI components
 ├── backend/
 │   ├── main.py                   # FastAPI application
-│   ├── api/routers/              # Endpoint definitions
+│   ├── api/routers/              # Endpoint definitions (curves, securities, portfolios, scenarios, reports)
 │   ├── api/schemas.py            # Pydantic models
 │   ├── api/dependencies.py       # Auth middleware
 │   ├── db/models.py              # SQLAlchemy models
@@ -164,7 +172,7 @@ BondFactor/
 │   │   ├── scenario.py           # Factor-shock scenarios
 │   │   └── krd.py                # Key Rate Duration
 │   ├── ingestion/                # Data fetch + validation
-│   └── tests/                    # 60 tests (pytest)
+│   └── tests/                    # 71 tests (pytest)
 └── assets/                       # Design docs (gitignored)
 ```
 
@@ -177,7 +185,7 @@ Three-layer testing strategy:
 - **Layer 3 — Golden reference:** Benchmark security pricing verified against independently sourced market values.
 
 ```bash
-# Backend (60 tests)
+# Backend (71 tests)
 cd backend && python -m pytest tests/ -v
 
 # Frontend type check
@@ -205,7 +213,7 @@ Historical data availability: reliable FBIL par yield data starts from March 31,
 ## Roadmap
 
 - **Phase 1 (Complete):** Core analytics engine — ingestion, curve fitting, pricing, risk, scenarios, KRD, TypeScript parity, golden reference validation, full frontend.
-- **Phase 2 (In Progress):** Platform features — authentication, portfolio persistence, multi-portfolio management, historical replay, PDF/Excel reporting.
+- **Phase 2 (Complete):** Platform features — authentication, portfolio persistence, multi-portfolio management, historical replay, PDF/Excel reporting, saved custom scenarios.
 - **Phase 3 (Indicative):** Advanced analytics — historical scenario calibration, risk attribution, performance optimization, expanded visualization.
 
 ## License

@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from api.routers import curves, securities, portfolios, reports, internal
+from api.routers import curves, securities, portfolios, reports, scenarios, internal
 from db.session import engine
 from db.models import Base
 
@@ -82,6 +82,7 @@ app.include_router(curves.router, prefix="/api/v1", tags=["Curves"])
 app.include_router(securities.router, prefix="/api/v1/securities", tags=["Securities"])
 app.include_router(portfolios.router, prefix="/api/v1/portfolios", tags=["Portfolios"])
 app.include_router(reports.router, prefix="/api/v1/reports", tags=["Reports"])
+app.include_router(scenarios.router, prefix="/api/v1/scenarios", tags=["Scenarios"])
 app.include_router(internal.router, prefix="/api/v1/internal", tags=["Internal"])
 
 @app.get("/")

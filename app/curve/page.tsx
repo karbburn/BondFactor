@@ -33,17 +33,17 @@ export default function CurveExplorer() {
 
   if (loading) {
     return (
-      <div className="container font-mono" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: 'var(--brand-color)' }}>
-        <div>&gt;&gt; LOADING CURVE EXPLORER...</div>
+      <div className="container font-mono" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: 'var(--accent)' }}>
+        <div>Loading Curve Explorer...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container font-mono" style={{ padding: '2rem', color: 'var(--color-error)' }}>
-        <div className="panel" style={{ borderColor: 'var(--color-error)' }}>
-          <div className="panel-title" style={{ color: 'var(--color-error)' }}>SYSTEM FAULT</div>
+      <div className="container font-mono" style={{ padding: '2rem', color: 'var(--negative)' }}>
+        <div className="error-panel">
+          <div className="error-title">Error Loading Curve</div>
           <div style={{ marginTop: '10px' }}>{error}</div>
         </div>
       </div>

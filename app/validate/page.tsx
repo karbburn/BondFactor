@@ -153,17 +153,17 @@ export default function PricingValidation() {
 
   if (loading) {
     return (
-      <div className="container font-mono" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: 'var(--brand-color)' }}>
-        <div>&gt;&gt; LOADING PRICING VALIDATION SYSTEM...</div>
+      <div className="container font-mono" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: 'var(--accent)' }}>
+        <div>Loading Pricing Validation...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container font-mono" style={{ padding: '2rem', color: 'var(--color-error)' }}>
-        <div className="panel" style={{ borderColor: 'var(--color-error)' }}>
-          <div className="panel-title" style={{ color: 'var(--color-error)' }}>SYSTEM FAULT</div>
+      <div className="container font-mono" style={{ padding: '2rem', color: 'var(--negative)' }}>
+        <div className="error-panel">
+          <div className="error-title">Error Running Validation</div>
           <div style={{ marginTop: '10px' }}>{error}</div>
         </div>
       </div>
@@ -185,7 +185,7 @@ export default function PricingValidation() {
           Government Securities spanning the full maturity spectrum (2Y — 30Y). Reference values
           are <strong>manually verified calculations</strong> using NSS curve discounting — not
           authoritative market quotes.{' '}
-          <span style={{ color: 'var(--brand-color)' }}>
+          <span style={{ color: 'var(--accent)' }}>
             Discrepancies against actual traded prices are expected
           </span>{' '}
           due to BondFactor&apos;s default-free, liquidity-agnostic valuation assumption.
@@ -225,9 +225,9 @@ export default function PricingValidation() {
                       fontWeight: 700,
                       padding: '2px 6px',
                       borderRadius: '2px',
-                      backgroundColor: row.isValid ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)',
-                      color: row.isValid ? 'var(--color-success)' : 'var(--color-error)',
-                      border: `1px solid ${row.isValid ? 'var(--color-success)' : 'var(--color-error)'}`
+                      backgroundColor: row.isValid ? 'var(--positive-bg)' : 'var(--negative-bg)',
+                      color: row.isValid ? 'var(--positive)' : 'var(--negative)',
+                      border: `1px solid ${row.isValid ? 'var(--positive)' : 'var(--negative)'}`
                     }}
                   >
                     {row.isValid ? 'CONSISTENT' : 'OUTLIER'}
@@ -239,13 +239,13 @@ export default function PricingValidation() {
         </table>
 
         {/* Reference source provenance */}
-        <div style={{ marginTop: '20px', borderTop: '1px solid var(--color-border)', paddingTop: '15px' }}>
-          <div className="font-mono text-brand" style={{ fontSize: '11px', textTransform: 'uppercase', marginBottom: '10px' }}>
-            &gt; Reference Source Provenance
+        <div style={{ marginTop: '20px', borderTop: '1px solid var(--border-subtle)', paddingTop: '15px' }}>
+          <div className="font-mono" style={{ fontSize: '11px', color: 'var(--accent)', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>
+            Reference Source Provenance
           </div>
           {validationRows.map(row => (
             <div key={row.id} style={{ marginBottom: '8px', fontSize: '12px', lineHeight: '1.5' }}>
-              <span className="font-mono" style={{ color: 'var(--brand-color)' }}>{row.securityName}</span>
+              <span className="font-mono" style={{ color: 'var(--accent)' }}>{row.securityName}</span>
               <span className="font-mono" style={{ color: 'var(--text-secondary)', marginLeft: '8px' }}>
                 [{row.referenceSource}]
               </span>
@@ -257,8 +257,8 @@ export default function PricingValidation() {
         </div>
 
         {/* Methodology note */}
-        <div style={{ marginTop: '20px', padding: '12px', backgroundColor: 'rgba(255, 179, 64, 0.05)', border: '1px solid rgba(255, 179, 64, 0.15)', borderRadius: '3px' }}>
-          <div className="font-mono" style={{ fontSize: '11px', color: 'var(--brand-color)', marginBottom: '6px' }}>
+        <div style={{ marginTop: '20px', padding: '12px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '3px' }}>
+          <div className="font-mono" style={{ fontSize: '11px', color: 'var(--accent)', marginBottom: '6px', fontWeight: 600 }}>
             METHODOLOGY NOTE
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>

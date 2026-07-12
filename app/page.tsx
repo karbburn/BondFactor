@@ -47,7 +47,7 @@ export default function Dashboard() {
     return (
       <div className="container error-container">
         <div className="error-panel">
-          <div className="error-title">SYSTEM FAULT</div>
+          <div className="error-title">Error Loading Data</div>
           <div className="mt-10">{error}</div>
           <div className="error-subtitle">
             Backend API: {process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}
@@ -117,7 +117,7 @@ export default function Dashboard() {
           <div className="metric-label">Shocked Dirty Value</div>
           <div className="metric-value">{formatCurrency(summary.totalShockedDirtyValue)}</div>
         </div>
-        <div className="metric-card" style={{ borderLeftColor: summary.totalPnl >= 0 ? 'var(--color-success)' : 'var(--color-error)' }}>
+        <div className={`metric-card ${summary.totalPnl >= 0 ? 'metric-positive' : 'metric-negative'}`}>
           <div className="metric-label">Scenario P&amp;L</div>
           <div className={`metric-value ${summary.totalPnl >= 0 ? 'text-success' : 'text-error'}`}>
             {summary.totalPnl >= 0 ? '+' : ''}

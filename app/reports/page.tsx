@@ -190,7 +190,7 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
               <div className="font-mono" style={{ marginBottom: '5px', fontWeight: 600 }}>ACTIVE NSS CURVE SHOCKS:</div>
               <div>Level: {parallelShift >= 0 ? '+' : ''}{parallelShift.toFixed(2)}%</div>
               <div>Slope: {slopeShock >= 0 ? '+' : ''}{slopeShock.toFixed(2)}%</div>
@@ -244,8 +244,8 @@ export default function ReportsPage() {
                 <span style={{ color: 'var(--text-secondary)' }}>Status:</span>{' '}
                 <span style={{
                   fontWeight: 600,
-                  color: report.status === 'completed' ? 'var(--color-success)' :
-                         report.status === 'failed' ? 'var(--color-error)' : 'var(--brand-color)',
+                   color: report.status === 'completed' ? 'var(--positive)' :
+                          report.status === 'failed' ? 'var(--negative)' : 'var(--accent)',
                 }}>
                   {report.status.toUpperCase()}
                 </span>

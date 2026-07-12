@@ -88,7 +88,7 @@ export default function PortfolioComparisonPanel({ name, computedPositions, summ
       )}
 
       {/* KRD bar sparkline */}
-      <div style={{ marginTop: '15px', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
+      <div style={{ marginTop: '15px', borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
         <div className="font-mono" style={{ fontSize: '9px', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>KRD Profile</div>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '45px', padding: '0 5px' }}>
           {summary.portfolioKrd.map((v, i) => {
@@ -99,7 +99,7 @@ export default function PortfolioComparisonPanel({ name, computedPositions, summ
                 <div
                   style={{
                     width: '100%', height: `${h}px`,
-                    backgroundColor: v >= 0 ? color : 'var(--color-error)',
+                    backgroundColor: v >= 0 ? color : 'var(--negative)',
                     borderRadius: '1px', opacity: 0.8,
                     transition: 'all 0.15s ease',
                   }}

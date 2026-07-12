@@ -33,9 +33,9 @@ export default function KRDLadder({ krdValues, tenors = DEFAULT_KEY_TENORS, titl
   const zeroX = paddingLeft + plotWidth / 2;
   
   return (
-    <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '15px' }}>
-      <div className="font-mono text-brand" style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', marginBottom: '10px' }}>
-        {title}
+    <div className="panel chart-panel">
+      <div className="panel-header">
+        <span className="panel-title">{title}</span>
       </div>
       <svg
         viewBox={`0 0 ${width} ${height}`}
@@ -45,7 +45,7 @@ export default function KRDLadder({ krdValues, tenors = DEFAULT_KEY_TENORS, titl
         role="img"
         aria-label={title}
       >
-        <line x1={zeroX} y1={headerHeight} x2={zeroX} y2={height - 15} stroke="#8E8E93" strokeWidth="1" strokeDasharray="2 2" />
+        <line x1={zeroX} y1={headerHeight} x2={zeroX} y2={height - 15} stroke="var(--text-tertiary)" strokeWidth="1" strokeDasharray="2 2" />
         <text x={zeroX} y={headerHeight - 8} textAnchor="middle" fill="var(--text-secondary)" style={{ fontSize: '8px' }}>0.0</text>
         
         {tenors.map((t, idx) => {
@@ -59,8 +59,8 @@ export default function KRDLadder({ krdValues, tenors = DEFAULT_KEY_TENORS, titl
           const isHovered = hoveredIdx === idx;
           // Highlight bar on hover by changing color/opacity
           const barColor = val >= 0 
-            ? (isHovered ? '#ffca28' : 'var(--brand-color)') 
-            : (isHovered ? '#ff5252' : 'var(--color-error)');
+            ? (isHovered ? 'var(--accent-hover)' : 'var(--accent)') 
+            : (isHovered ? 'var(--negative)' : 'var(--negative)');
           const barOpacity = isHovered ? '1.0' : '0.8';
           
           return (
@@ -69,7 +69,7 @@ export default function KRDLadder({ krdValues, tenors = DEFAULT_KEY_TENORS, titl
                 {t < 1 ? `${t * 12}M` : `${t}Y`}
               </text>
               
-              <line x1={paddingLeft} y1={y + rowHeight} x2={width - paddingRight} y2={y + rowHeight} stroke="var(--border-color)" strokeWidth="0.5" />
+              <line x1={paddingLeft} y1={y + rowHeight} x2={width - paddingRight} y2={y + rowHeight} stroke="var(--border-subtle)" strokeWidth="0.5" />
               
               <rect
                 x={barX}
@@ -111,7 +111,7 @@ export default function KRDLadder({ krdValues, tenors = DEFAULT_KEY_TENORS, titl
               x="-40"
               y="-18"
               fill="var(--bg-tertiary)"
-              stroke="var(--border-color)"
+              stroke="var(--border-medium)"
               strokeWidth="1"
               rx="2"
               opacity="0.95"

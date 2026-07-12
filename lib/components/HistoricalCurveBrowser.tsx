@@ -125,12 +125,10 @@ export default function HistoricalCurveBrowser() {
       {/* Coverage banner — 12px font and prominent border */}
       <div className="panel" style={{
         padding: '12px 18px',
-        borderLeft: '4px solid var(--brand-color)',
-        backgroundColor: 'rgba(242, 169, 0, 0.03)',
         marginBottom: '1rem',
       }}>
         <div className="font-mono" style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: '1.6' }}>
-          <span style={{ color: 'var(--brand-color)', fontWeight: 600 }}>ARCHIVE COVERAGE:</span>{' '}
+          <span style={{ color: 'var(--accent)', fontWeight: 600 }}>ARCHIVE COVERAGE:</span>{' '}
           {coverageBanner ? (
             <>
               {coverageBanner.earliest} to {coverageBanner.latest} —{' '}
@@ -138,7 +136,7 @@ export default function HistoricalCurveBrowser() {
               archived. Historical coverage builds daily upon backend par yield ingestion.
             </>
           ) : (
-            <span style={{ color: 'var(--color-error)' }}>
+            <span style={{ color: 'var(--negative)' }}>
               No archived curves yet. Daily ingestion data will populate this workstation database.
             </span>
           )}
@@ -146,7 +144,7 @@ export default function HistoricalCurveBrowser() {
       </div>
 
       {error && (
-        <div className="panel" style={{ borderColor: 'var(--color-error)', padding: '12px 15px', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="panel" style={{ borderColor: 'var(--negative)', padding: '12px 15px', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div className="font-mono text-error" style={{ fontSize: '11px' }}>{error}</div>
           <button className="btn btn-secondary font-mono" style={{ fontSize: '9px', padding: '2px 8px' }} onClick={fetchDates}>
             RETRY
@@ -194,9 +192,9 @@ export default function HistoricalCurveBrowser() {
                   tabIndex={focusedIdx === idx || (focusedIdx === -1 && idx === 0) ? 0 : -1}
                   style={{
                     display: 'block', width: '100%', textAlign: 'left',
-                    padding: '6px 10px', border: 'none', borderBottom: '1px solid var(--border-color)',
+                    padding: '6px 10px', border: 'none', borderBottom: '1px solid var(--border-subtle)',
                     background: selectedDate === d.curve_date ? 'var(--bg-tertiary)' : 'transparent',
-                    color: selectedDate === d.curve_date ? 'var(--brand-color)' : 'var(--text-primary)',
+                    color: selectedDate === d.curve_date ? 'var(--accent)' : 'var(--text-primary)',
                     cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '11px',
                     outline: 'none'
                   }}

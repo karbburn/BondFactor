@@ -14,10 +14,10 @@ export default function SavedPortfoliosPage() {
   if (!user) {
     return (
       <div className="container">
-        <div className="panel" style={{ borderLeft: '3px solid var(--brand-color)', padding: '2rem', maxWidth: '600px', margin: '4rem auto' }}>
-          <h2 className="font-mono text-brand" style={{ textTransform: 'uppercase', marginBottom: '15px' }}>&gt; Saved Portfolios</h2>
+        <div className="panel" style={{ padding: '2rem', maxWidth: '600px', margin: '4rem auto' }}>
+          <h2 className="font-mono text-brand" style={{ marginBottom: '15px' }}>Saved Portfolios</h2>
           <p className="font-mono" style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Log in to view your saved portfolios.</p>
-          <div style={{ marginTop: '25px' }}><Link href="/login" className="btn font-mono">&lt; Log In</Link></div>
+          <div style={{ marginTop: '25px' }}><Link href="/login" className="btn font-mono">Log In</Link></div>
         </div>
       </div>
     );

@@ -123,11 +123,11 @@ export default function ScenarioComposer() {
     const pct = ((val - min) / (max - min)) * 100;
     if (val >= 0) {
       return {
-        background: `linear-gradient(to right, var(--bg-tertiary) 0%, var(--bg-tertiary) 50%, var(--brand-color) 50%, var(--brand-color) ${pct}%, var(--bg-tertiary) ${pct}%, var(--bg-tertiary) 100%)`
+        background: `linear-gradient(to right, var(--bg-tertiary) 0%, var(--bg-tertiary) 50%, var(--accent) 50%, var(--accent) ${pct}%, var(--bg-tertiary) ${pct}%, var(--bg-tertiary) 100%)`
       };
     } else {
       return {
-        background: `linear-gradient(to right, var(--bg-tertiary) 0%, var(--bg-tertiary) ${pct}%, var(--brand-color) ${pct}%, var(--brand-color) 50%, var(--bg-tertiary) 50%, var(--bg-tertiary) 100%)`
+        background: `linear-gradient(to right, var(--bg-tertiary) 0%, var(--bg-tertiary) ${pct}%, var(--accent) ${pct}%, var(--accent) 50%, var(--bg-tertiary) 50%, var(--bg-tertiary) 100%)`
       };
     }
   };
@@ -225,7 +225,7 @@ export default function ScenarioComposer() {
         </div>
 
         {/* Twist Shock */}
-        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '15px' }}>
+        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '15px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}>
             <span>Twist Shock (Slope pivot twist)</span>
             <span className="font-mono text-brand">{twistShock >= 0 ? '+' : ''}{twistShock.toFixed(2)}%</span>
@@ -263,7 +263,7 @@ export default function ScenarioComposer() {
 
         {/* Save / Load */}
         {user && (
-          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '15px' }}>
+          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '15px' }}>
             <div className="font-mono text-brand" style={{ fontSize: '11px', fontWeight: 600, marginBottom: '8px' }}>
               SAVE / LOAD SCENARIO:
             </div>
@@ -296,13 +296,13 @@ export default function ScenarioComposer() {
               <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                 {savedScenarios.map(s => (
                   <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '3px 0', borderBottom: '1px solid var(--border-color)' }}>
+                    padding: '3px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                     <button className="font-mono" style={{ fontSize: '10px', color: 'var(--text-primary)',
                       background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', flex: 1 }}
                       onClick={() => handleLoad(s)}>
                       {s.scenario_name}
                     </button>
-                    <button className="font-mono" style={{ fontSize: '10px', color: 'var(--color-error)',
+                    <button className="font-mono" style={{ fontSize: '10px', color: 'var(--negative)',
                       background: 'none', border: 'none', cursor: 'pointer' }}
                       onClick={() => handleDelete(s.id, s.scenario_name)}>DEL</button>
                   </div>

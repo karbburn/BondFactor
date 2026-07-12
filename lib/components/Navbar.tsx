@@ -20,12 +20,9 @@ export default function Navbar() {
 
   return (
     <header className="navbar">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
         <span className="font-mono text-brand" style={{ fontWeight: 700, fontSize: '16px', letterSpacing: '0.1em' }}>
-          BONDFACTOR // TERMINAL
-        </span>
-        <span style={{ fontSize: '10px', backgroundColor: '#262636', padding: '2px 6px', borderRadius: '2px', color: '#8E8E93' }}>
-          v1.0.0
+          BONDFACTOR
         </span>
       </div>
       <nav className="nav-links">

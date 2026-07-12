@@ -24,7 +24,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "BondFactor // Fixed Income Workstation",
+  title: "BondFactor | Fixed Income Risk Engine",
   description: "Bloomberg-inspired Indian G-Sec curve deformation and risk analytics engine.",
 };
 
@@ -48,15 +48,12 @@ export default function RootLayout({
                       {children}
                     </main>
                     <footer className="layout-footer">
-                      <div className="font-mono footer-content">
-                        BONDFACTOR RISK ENGINE // PORTFOLIO ANALYTICS PLATFORM
-                        <span className="footer-details">
-                          v1.0.0 (Build: 2026-07-12) | Powered by FastAPI + Supabase
-                        </span>
+                      <div className="footer-content">
+                        <span>BONDFACTOR Fixed Income Risk Engine</span>
                         <div className="footer-legal">
-                          <Link href="/privacy" className="footer-legal-link">Privacy Policy</Link>
-                          <span className="footer-legal-sep">|</span>
-                          <Link href="/terms" className="footer-legal-link">Terms of Use</Link>
+                          <Link href="/privacy">Privacy Policy</Link>
+                          <span>|</span>
+                          <Link href="/terms">Terms of Use</Link>
                         </div>
                       </div>
                     </footer>

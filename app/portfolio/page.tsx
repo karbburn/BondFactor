@@ -74,7 +74,7 @@ export default function PortfolioBuilder() {
     return (
       <div className="container error-container fade-in">
         <div className="error-panel">
-          <div className="error-title">SYSTEM FAULT</div>
+          <div className="error-title">Error Loading Portfolio</div>
           <div className="mt-10">{error}</div>
         </div>
       </div>
@@ -251,7 +251,7 @@ export default function PortfolioBuilder() {
           )}
 
           {/* Cloud Persistence Panel */}
-          <div style={{ marginTop: '25px', borderTop: '1px solid var(--border-color)', paddingTop: '15px' }}>
+          <div style={{ marginTop: '25px', borderTop: '1px solid var(--border-subtle)', paddingTop: '15px' }}>
             <span className="font-mono text-brand" style={{ fontSize: '11px', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
               CLOUD PERSISTENCE:
             </span>
@@ -300,25 +300,25 @@ export default function PortfolioBuilder() {
 
                 {/* Saved list */}
                 {savedPortfolios.length > 0 ? (
-                  <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '8px', border: '1px solid var(--border-color)', borderRadius: '2px', padding: '5px' }}>
+                  <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '8px', border: '1px solid var(--border-subtle)', borderRadius: '2px', padding: '5px' }}>
                     {savedPortfolios.map(sp => (
                       <div key={sp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        padding: '4px 0', borderBottom: '1px solid var(--border-color)' }}>
+                        padding: '4px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, cursor: 'pointer' }}>
                           <input
                             type="checkbox"
                             checked={compareIds.includes(sp.id)}
                             onChange={() => toggleCompare(sp.id)}
-                            style={{ accentColor: 'var(--brand-color)' }}
+                            style={{ accentColor: 'var(--accent)' }}
                             aria-label={`Compare ${sp.portfolio_name}`}
                           />
-                          <button className="font-mono" style={{ fontSize: '10px', color: sp.id === activePortfolioId ? 'var(--brand-color)' : 'var(--text-primary)',
+                          <button className="font-mono" style={{ fontSize: '10px', color: sp.id === activePortfolioId ? 'var(--accent)' : 'var(--text-primary)',
                             background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
                             onClick={() => loadPortfolio(sp.id)}>
                             {sp.portfolio_name} <span style={{ color: 'var(--text-secondary)' }}>({sp.position_count})</span>
                           </button>
                         </label>
-                        <button className="font-mono" style={{ fontSize: '10px', color: 'var(--color-error)', background: 'none',
+                        <button className="font-mono" style={{ fontSize: '10px', color: 'var(--negative)', background: 'none',
                           border: 'none', cursor: 'pointer' }}
                           onClick={() => handleDeleteSavedPortfolioClick(sp.id, sp.portfolio_name)}>DEL</button>
                       </div>

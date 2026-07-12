@@ -204,8 +204,8 @@ export default function ComparePage() {
             {loaded.map((p, i) => {
               if (p.error) {
                 return (
-                  <div key={p.id} className="panel" style={{ borderLeft: '3px solid var(--color-error)', padding: '15px' }}>
-                    <div className="panel-header" style={{ borderBottomColor: 'var(--color-error)' }}>
+                  <div key={p.id} className="panel" style={{ padding: '15px', borderColor: 'var(--negative)' }}>
+                    <div className="panel-header" style={{ borderBottomColor: 'var(--negative)' }}>
                       <span className="panel-title text-error">{p.name}</span>
                     </div>
                     <div className="font-mono text-error" style={{ fontSize: '11px', marginTop: '10px' }}>

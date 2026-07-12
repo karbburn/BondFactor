@@ -31,7 +31,7 @@ export default function LoginPage() {
   if (loading) {
     return (
       <div key={viewKey} className="container loading-container fade-in">
-        <div>{'>>'} LOADING AUTH STATE...</div>
+        <div>Loading...</div>
       </div>
     );
   }
@@ -41,7 +41,7 @@ export default function LoginPage() {
       <div key={viewKey} className="container fade-in">
         <div className="panel auth-panel auth-panel-success">
           <h2 className="font-mono text-brand auth-heading">
-            {'>'} Authenticated
+            Authenticated
           </h2>
           <div className="font-mono auth-info">
             <div>USER: <span className="text-primary">{user.email}</span></div>
@@ -81,7 +81,7 @@ export default function LoginPage() {
     <div key={viewKey} className="container fade-in">
       <div className="panel auth-panel auth-panel-brand">
         <h2 className="font-mono text-brand auth-heading">
-          {'>'} {isSignUp ? 'Create Account' : 'Sign In'}
+          {isSignUp ? 'Create Account' : 'Sign In'}
         </h2>
 
         <form onSubmit={handleSubmit}>
@@ -136,7 +136,7 @@ export default function LoginPage() {
             className="btn font-mono form-submit"
             disabled={submitting}
           >
-            {submitting ? '>> PROCESSING...' : isSignUp ? '> Create Account' : '> Sign In'}
+            {submitting ? 'PROCESSING...' : isSignUp ? 'Create Account' : 'Sign In'}
           </button>
         </form>
 
@@ -161,7 +161,7 @@ export default function LoginPage() {
 
         <div className="auth-back">
           <Link href="/" className="font-mono auth-back-link">
-            {'<'} Return to Workstation
+            Return to Workstation
           </Link>
         </div>
       </div>

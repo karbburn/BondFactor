@@ -26,6 +26,8 @@ export default function ScenarioComposer() {
     twistShock, setTwistShock,
     twistPivot, setTwistPivot,
     resetScenarios, loadScenario,
+    isCalibratedFromHistory, setIsCalibratedFromHistory,
+    calibrationInfo, setCalibrationInfo,
   } = useScenario();
   const { user } = useAuth();
 
@@ -33,6 +35,33 @@ export default function ScenarioComposer() {
   const [scenarioName, setScenarioName] = useState('');
   const [saving, setSaving] = useState(false);
   const [loadingScenarios, setLoadingScenarios] = useState(false);
+  
+  const [calibrating, setCalibrating] = useState(false);
+  const [calibError, setCalibError] = useState('');
+
+  const handleCalibrateFromHistory = async () => {
+    setCalibrating(true);
+    setCalibError('');
+    try {
+      const data = await apiFetch('/api/v1/curves/historical-calibration');
+      setParallelShift(data.parallel_shift);
+      setSlopeShock(data.slope_shock);
+      setCurvature1Shock(data.curvature1_shock);
+      setCurvature2Shock(data.curvature2_shock);
+      setTwistShock(0.0);
+      setIsCalibratedFromHistory(true);
+      setCalibrationInfo({
+        data_points: data.data_points,
+        confidence_level: data.confidence_level,
+        earliest_date: data.earliest_date,
+        latest_date: data.latest_date,
+      });
+    } catch (e: unknown) {
+      setCalibError(e instanceof Error ? e.message : 'Calibration failed');
+    } finally {
+      setCalibrating(false);
+    }
+  };
   const [saveMsg, setSaveMsg] = useState('');
 
   const fetchScenarios = useCallback(async () => {
@@ -122,6 +151,9 @@ export default function ScenarioComposer() {
       <div className="panel-header">
         <span className="panel-title">NSS Curve Scenario Composer</span>
         <div style={{ display: 'flex', gap: '5px' }}>
+          <button className="btn btn-secondary font-mono" style={{ fontSize: '10px', padding: '2px 8px' }} onClick={handleCalibrateFromHistory} disabled={calibrating}>
+            {calibrating ? 'Calibrating...' : 'Calibrate from History'}
+          </button>
           <button className="btn btn-secondary font-mono" style={{ fontSize: '10px', padding: '2px 8px' }} onClick={handleResetClick}>
             Reset
           </button>
@@ -141,7 +173,10 @@ export default function ScenarioComposer() {
             max="3.00"
             step="0.05"
             value={parallelShift}
-            onChange={(e) => setParallelShift(parseFloat(e.target.value))}
+            onChange={(e) => {
+              setParallelShift(parseFloat(e.target.value));
+              setIsCalibratedFromHistory(false);
+            }}
             className="custom-slider"
             aria-label="Level Shock (Parallel Shift)"
             title="Level Shock (Parallel shift, beta 0) - affects the overall height of the curve across all tenors."
@@ -161,7 +196,10 @@ export default function ScenarioComposer() {
             max="3.00"
             step="0.05"
             value={slopeShock}
-            onChange={(e) => setSlopeShock(parseFloat(e.target.value))}
+            onChange={(e) => {
+              setSlopeShock(parseFloat(e.target.value));
+              setIsCalibratedFromHistory(false);
+            }}
             className="custom-slider"
             aria-label="Slope Shock (Steepener/Flattener)"
             title="Slope Shock (beta 1) - steepens or flattens the yield curve by shifting short rates relative to long rates."
@@ -181,7 +219,10 @@ export default function ScenarioComposer() {
             max="4.00"
             step="0.1"
             value={curvature1Shock}
-            onChange={(e) => setCurvature1Shock(parseFloat(e.target.value))}
+            onChange={(e) => {
+              setCurvature1Shock(parseFloat(e.target.value));
+              setIsCalibratedFromHistory(false);
+            }}
             className="custom-slider"
             aria-label="Curvature 1 Shock (Medium-term belly)"
             title="Curvature 1 Shock (beta 2) - affects medium-term rates, creating or modifying a belly shape in the 2Y-7Y sector."
@@ -201,7 +242,10 @@ export default function ScenarioComposer() {
             max="4.00"
             step="0.1"
             value={curvature2Shock}
-            onChange={(e) => setCurvature2Shock(parseFloat(e.target.value))}
+            onChange={(e) => {
+              setCurvature2Shock(parseFloat(e.target.value));
+              setIsCalibratedFromHistory(false);
+            }}
             className="custom-slider"
             aria-label="Curvature 2 Shock (Long-term belly)"
             title="Curvature 2 Shock (beta 3) - affects long-term rates, creating a secondary curvature/belly in the 10Y-30Y sector."
@@ -221,7 +265,10 @@ export default function ScenarioComposer() {
             max="2.00"
             step="0.05"
             value={twistShock}
-            onChange={(e) => setTwistShock(parseFloat(e.target.value))}
+            onChange={(e) => {
+              setTwistShock(parseFloat(e.target.value));
+              setIsCalibratedFromHistory(false);
+            }}
             className="custom-slider"
             aria-label="Twist Shock (Slope pivot twist)"
             title="Twist Shock - twists the curve around a specified pivot tenor (steepens or flattens around the pivot)."
@@ -236,7 +283,10 @@ export default function ScenarioComposer() {
                 max="30"
                 step="0.5"
                 value={twistPivot}
-                onChange={(e) => setTwistPivot(Math.max(0.5, parseFloat(e.target.value) || 5.0))}
+                onChange={(e) => {
+                  setTwistPivot(Math.max(0.5, parseFloat(e.target.value) || 5.0));
+                  setIsCalibratedFromHistory(false);
+                }}
                 className="form-input font-mono"
                 style={{ width: '60px', padding: '2px 5px', fontSize: '11px' }}
                 aria-label="Twist Pivot Maturity"
@@ -245,6 +295,39 @@ export default function ScenarioComposer() {
             </div>
           </div>
         </div>
+
+        {/* Historical Calibration Readout & Warning Banner */}
+        {isCalibratedFromHistory && calibrationInfo && (
+          <div style={{
+            padding: '10px',
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: '4px',
+            fontSize: '11px',
+            fontFamily: 'var(--font-mono)',
+            marginTop: '10px'
+          }}>
+            <div style={{ fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: '4px' }}>
+              Historical Shock Calibration Active
+            </div>
+            <div>Percentile: 95th | Data Points: {calibrationInfo.data_points}</div>
+            <div>Range: {calibrationInfo.earliest_date} to {calibrationInfo.latest_date}</div>
+            <div style={{ marginTop: '6px', color: calibrationInfo.confidence_level === 'high' ? 'var(--color-success)' : 'var(--color-warning)' }}>
+              Confidence: {calibrationInfo.confidence_level.toUpperCase().replace('_', ' ')}
+            </div>
+            {(calibrationInfo.confidence_level === 'very_low' || calibrationInfo.confidence_level === 'low') && (
+              <div style={{ marginTop: '6px', color: 'var(--color-error)', fontSize: '10px', borderTop: '1px solid var(--border-subtle)', paddingTop: '4px' }}>
+                WARNING: Historical database has very short coverage ({calibrationInfo.data_points} days). Statistical confidence in percentile estimation is extremely low.
+              </div>
+            )}
+          </div>
+        )}
+        {calibError && (
+          <div className="text-error font-mono" style={{ fontSize: '11px', marginTop: '5px' }}>
+            Error: {calibError}
+          </div>
+        )}
+
 
         {/* Save / Load */}
         {user && (

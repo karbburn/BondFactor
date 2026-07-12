@@ -20,6 +20,20 @@ interface ScenarioContextType extends ScenarioValues {
   setTwistPivot: (v: number) => void;
   resetScenarios: () => void;
   loadScenario: (s: ScenarioValues) => void;
+  isCalibratedFromHistory: boolean;
+  setIsCalibratedFromHistory: (v: boolean) => void;
+  calibrationInfo: null | {
+    data_points: number;
+    confidence_level: string;
+    earliest_date: string | null;
+    latest_date: string | null;
+  };
+  setCalibrationInfo: (v: null | {
+    data_points: number;
+    confidence_level: string;
+    earliest_date: string | null;
+    latest_date: string | null;
+  }) => void;
 }
 
 const ScenarioContext = createContext<ScenarioContextType | null>(null);
@@ -31,6 +45,13 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
   const [curvature2Shock, setCurvature2Shock] = useState(0.0);
   const [twistShock, setTwistShock] = useState(0.0);
   const [twistPivot, setTwistPivot] = useState(5.0);
+  const [isCalibratedFromHistory, setIsCalibratedFromHistory] = useState(false);
+  const [calibrationInfo, setCalibrationInfo] = useState<null | {
+    data_points: number;
+    confidence_level: string;
+    earliest_date: string | null;
+    latest_date: string | null;
+  }>(null);
 
   const resetScenarios = useCallback(() => {
     setParallelShift(0.0);
@@ -39,6 +60,8 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
     setCurvature2Shock(0.0);
     setTwistShock(0.0);
     setTwistPivot(5.0);
+    setIsCalibratedFromHistory(false);
+    setCalibrationInfo(null);
   }, []);
 
   const loadScenario = useCallback((s: ScenarioValues) => {
@@ -48,6 +71,8 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
     setCurvature2Shock(s.curvature2Shock);
     setTwistShock(s.twistShock);
     setTwistPivot(s.twistPivot);
+    setIsCalibratedFromHistory(false);
+    setCalibrationInfo(null);
   }, []);
 
   return (
@@ -58,6 +83,8 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
         setParallelShift, setSlopeShock, setCurvature1Shock,
         setCurvature2Shock, setTwistShock, setTwistPivot,
         resetScenarios, loadScenario,
+        isCalibratedFromHistory, setIsCalibratedFromHistory,
+        calibrationInfo, setCalibrationInfo,
       }}
     >
       {children}

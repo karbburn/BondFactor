@@ -521,5 +521,41 @@ def test_factor_pnl_decomposition():
     assert pytest.approx(sum_krs, rel=1e-3) == pos_dv01
 
 
+# Test 17: Historical scenario calibration
+def test_historical_calibration():
+    from quant_core.historical_calibration import calibrate_factor_shocks_from_history
+    import datetime
+
+    # 1. Insufficient data
+    res_insufficient = calibrate_factor_shocks_from_history([])
+    assert res_insufficient["confidence_level"] == "insufficient_data"
+    assert res_insufficient["parallel_shift"] == 0.0
+
+    # 2. Known distribution (constant changes)
+    calibrations = []
+    base_date = datetime.date(2025, 1, 1)
+
+    for i in range(101):
+        calibrations.append({
+            "curve_date": base_date + datetime.timedelta(days=i),
+            "beta0": 7.0 + 0.1 * i,
+            "beta1": -1.0 + 0.2 * i,
+            "beta2": 2.0 + 0.3 * i,
+            "beta3": -1.0 + 0.4 * i
+        })
+
+    res = calibrate_factor_shocks_from_history(calibrations)
+    assert res["data_points"] == 101
+    assert res["confidence_level"] == "medium"
+    assert pytest.approx(res["parallel_shift"]) == 0.1
+    assert pytest.approx(res["slope_shock"]) == 0.2
+    assert pytest.approx(res["curvature1_shock"]) == 0.3
+    assert pytest.approx(res["curvature2_shock"]) == 0.4
+    assert res["earliest_date"] == "2025-01-01"
+    assert res["latest_date"] == "2025-04-11"
+
+
+
+
 
 

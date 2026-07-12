@@ -1,5 +1,6 @@
 import os
-from datetime import datetime, timedelta, date
+from datetime import datetime, date
+from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
@@ -15,9 +16,7 @@ class TriggerRequest(BaseModel):
     date: Optional[str] = Field(None, description="Target date in YYYY-MM-DD format. Defaults to current IST date.")
 
 def get_current_ist_date() -> str:
-    # IST is UTC + 5:30
-    ist_time = datetime.utcnow() + timedelta(hours=5, minutes=30)
-    return ist_time.strftime("%Y-%m-%d")
+    return datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d")
 
 @router.post("/ingestion/trigger", status_code=status.HTTP_200_OK)
 def trigger_ingestion(

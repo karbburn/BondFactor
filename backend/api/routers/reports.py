@@ -19,9 +19,6 @@ def create_report(
     user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if req.format not in ("pdf", "xlsx"):
-        raise HTTPException(status_code=422, detail={"code": "VALIDATION_ERROR", "message": "format must be 'pdf' or 'xlsx'"})
-
     if not req.scenarios:
         raise HTTPException(status_code=422, detail={"code": "VALIDATION_ERROR", "message": "At least one scenario is required"})
 

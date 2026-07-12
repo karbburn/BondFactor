@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { usePortfolio, SavedPortfolio } from '../../lib/state/PortfolioContext';
+import { usePortfolio } from '../../lib/state/PortfolioContext';
 import { useAuth } from '../../lib/state/AuthContext';
 import { useScenario } from '../../lib/state/ScenarioContext';
 import { getSupabase } from '../../lib/supabase/client';

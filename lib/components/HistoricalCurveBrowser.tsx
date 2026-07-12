@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useCurve } from '../state/CurveContext';
 import { ZeroCurve } from '../pricing-engine/bootstrap';
 import CurveChart from './CurveChart';
 
@@ -19,7 +18,6 @@ interface ZeroPoint {
 }
 
 export default function HistoricalCurveBrowser() {
-  const { curve: currentCurve } = useCurve();
   const [dates, setDates] = useState<ArchivedDate[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [zeroPoints, setZeroPoints] = useState<ZeroPoint[]>([]);
@@ -58,14 +56,6 @@ export default function HistoricalCurveBrowser() {
     const rates = zeroPoints.map(p => p.zero_rate);
     return new ZeroCurve(maturities, rates);
   }, [zeroPoints]);
-
-  const currentZc = useMemo(() => {
-    if (!currentCurve?.parameters) return null;
-    // Build from current curve's NSS params via the same bootstrap the ResultsContext uses
-    // But we don't have buildZeroCurve here — use a simple approach with the tenors we know
-    // Actually, we can import it
-    return null; // Will be built via import
-  }, [currentCurve]);
 
   const coverageBanner = useMemo(() => {
     if (dates.length === 0) return null;

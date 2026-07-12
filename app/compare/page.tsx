@@ -8,6 +8,7 @@ import { buildZeroCurve, applyShocks, computePortfolioResults, ScenarioShocks } 
 import { FALLBACK_NSS_PARAMS } from '../../lib/pricing-engine/constants';
 import { getSupabase } from '../../lib/supabase/client';
 import PortfolioComparisonPanel from '../../lib/components/PortfolioComparisonPanel';
+import { formatCurrency } from '../../lib/utils/format';
 import ScenarioComposer from '../../lib/components/ScenarioComposer';
 
 const PANEL_COLORS = ['#0A84FF', '#FF9F0A', '#30D158', '#FF375F', '#BF5AF2', '#64D2FF'];
@@ -104,11 +105,6 @@ export default function ComparePage() {
   useEffect(() => {
     setLoaded(prev => prev.filter(l => compareIds.includes(l.id)));
   }, [compareIds]);
-
-  const formatCurrency = (val: number) => {
-    if (val >= 10000000) return `₹ ${(val / 10000000).toFixed(4)} Cr`;
-    return `₹ ${(val / 100000).toFixed(2)} L`;
-  };
 
   if (curveLoading) {
     return (

@@ -3,6 +3,7 @@
 import React from 'react';
 import { ComputedPosition, PortfolioSummary } from '../pricing-engine/computeResults';
 import { DEFAULT_KEY_TENORS } from '../pricing-engine/krd';
+import { formatCurrency } from '../utils/format';
 
 interface Props {
   name: string;
@@ -10,11 +11,6 @@ interface Props {
   summary: PortfolioSummary;
   color: string;
 }
-
-const formatCurrency = (val: number) => {
-  if (val >= 10000000) return `₹ ${(val / 10000000).toFixed(4)} Cr`;
-  return `₹ ${(val / 100000).toFixed(2)} L`;
-};
 
 export default function PortfolioComparisonPanel({ name, computedPositions, summary, color }: Props) {
   return (

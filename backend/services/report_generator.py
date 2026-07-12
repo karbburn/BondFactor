@@ -108,6 +108,19 @@ def generate_report(report_id: str):
     db = SessionLocal()
 
     try:
+        # ponytail: clean up stale "processing" reports older than 5 minutes
+        from datetime import timedelta
+        stale_cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
+        stale = db.query(ReportGeneration).filter(
+            ReportGeneration.status == "processing",
+            ReportGeneration.created_at < stale_cutoff,
+        ).all()
+        for s in stale:
+            s.status = "failed"
+            s.error_message = "Timed out"
+        if stale:
+            db.commit()
+
         rec = db.query(ReportGeneration).filter(ReportGeneration.id == report_id).first()
         if not rec:
             logger.error(f"Report record {report_id} not found")
@@ -195,9 +208,13 @@ def generate_report(report_id: str):
 
     except Exception as e:
         logger.error(f"Report {report_id} failed: {e}")
-        rec.status = "failed"
-        rec.error_message = str(e)
-        db.commit()
+        try:
+            if 'rec' in locals() and rec is not None:
+                rec.status = "failed"
+                rec.error_message = str(e)
+                db.commit()
+        except Exception:
+            logger.error(f"Failed to update report status for {report_id}")
     finally:
         db.close()
 

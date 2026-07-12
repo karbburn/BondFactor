@@ -101,9 +101,10 @@ def download_report(
     reports_dir = os.path.realpath(REPORTS_DIR)
     if not real_path.startswith(reports_dir + os.sep):
         raise HTTPException(status_code=403, detail="Access denied")
-    if not os.path.exists(real_path):
-        raise HTTPException(status_code=410, detail={"code": "GONE", "message": "Report file no longer available"})
+
+    if not os.path.isfile(real_path):
+        raise HTTPException(status_code=410, detail={"code": "GONE", "message": "Report file no longer available. Please regenerate."})
 
     media = "application/pdf" if rec.format == "pdf" else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     filename = f"bondfactor_report_{report_id[:8]}.{rec.format}"
-    return FileResponse(real_path, media_type=media, filename=filename, content_length=os.path.getsize(real_path))
+    return FileResponse(real_path, media_type=media, filename=filename)

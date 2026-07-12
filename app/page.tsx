@@ -25,7 +25,7 @@ export default function Dashboard() {
           <div className="panel-title" style={{ color: 'var(--color-error)' }}>SYSTEM FAULT</div>
           <div style={{ marginTop: '10px' }}>{error}</div>
           <div style={{ marginTop: '20px', fontSize: '11px', color: 'var(--text-secondary)' }}>
-            Ensure your local backend API is running at http://localhost:8000
+            Backend API: {process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}
           </div>
         </div>
       </div>

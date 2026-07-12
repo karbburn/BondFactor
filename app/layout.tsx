@@ -68,7 +68,7 @@ export default function RootLayout({
                     </main>
                     <footer style={{ backgroundColor: "var(--bg-secondary)", borderTop: "1px solid var(--border-color)", padding: "10px 1.5rem", textAlign: "center", fontSize: "11px", color: "var(--text-secondary)" }}>
                       <div className="font-mono">
-                        BONDFACTOR RISK ENGINE // PORTFOLIO ANALYTICS PLATFORM // FREE-TIER RUNTIME
+                        BONDFACTOR RISK ENGINE // PORTFOLIO ANALYTICS PLATFORM
                       </div>
                     </footer>
                   </div>

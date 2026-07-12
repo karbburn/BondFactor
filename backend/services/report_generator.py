@@ -255,12 +255,12 @@ def _render_pdf(path, portfolio_name, curve_date, scenario_results, base_zc_data
         pdf.cell(0, 7, "Portfolio Risk Summary", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Helvetica", "", 9)
         for label, val, fmt in [
-            ("Total Base Dirty Value", agg["total_base_dirty"], "₹{:,.2f}"),
-            ("Total Base Clean Value", agg["total_base_clean"], "₹{:,.2f}"),
-            ("Total Shocked Dirty Value", agg["total_shocked_dirty"], "₹{:,.2f}"),
-            ("Scenario P&L", agg["total_pnl"], "₹{:+,.2f}"),
+            ("Total Base Dirty Value", agg["total_base_dirty"], "Rs. {:,.2f}"),
+            ("Total Base Clean Value", agg["total_base_clean"], "Rs. {:,.2f}"),
+            ("Total Shocked Dirty Value", agg["total_shocked_dirty"], "Rs. {:,.2f}"),
+            ("Scenario P&L", agg["total_pnl"], "Rs. {:+,.2f}"),
             ("Modified Duration", agg["port_mod_dur"], "{:.4f} Y"),
-            ("Total DV01", agg["total_dv01"], "₹{:,.2f}"),
+            ("Total DV01", agg["total_dv01"], "Rs. {:,.2f}"),
             ("Convexity", agg["port_convexity"], "{:.4f}"),
         ]:
             pdf.cell(80, 6, label + ":")

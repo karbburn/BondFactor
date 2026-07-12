@@ -21,7 +21,7 @@ export default function AuthNav() {
     return (
       <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
         <span className="font-mono" style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-          {user.email}
+          {user.user_metadata?.name || user.email}
         </span>
         <span className="font-mono text-success" style={{ fontSize: "12px" }}>
           ● LIVE DATA

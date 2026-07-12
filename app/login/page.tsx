@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/state/AuthContext';
 
 export default function LoginPage() {
-  const { user, signIn, signUp, signOut, loading } = useAuth();
+  const { user, signIn, signUp, signInWithGoogle, signOut, loading } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -132,6 +132,17 @@ export default function LoginPage() {
             onClick={() => { setIsSignUp(!isSignUp); setError(''); setMessage(''); }}
           >
             {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Create one"}
+          </button>
+        </div>
+
+        <div style={{ marginTop: '15px', textAlign: 'center' }}>
+          <div className="font-mono" style={{ fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '10px' }}>OR</div>
+          <button
+            className="btn font-mono"
+            style={{ width: '100%', backgroundColor: '#4285f4', color: 'white', border: 'none', fontSize: '12px' }}
+            onClick={() => signInWithGoogle()}
+          >
+            Sign in with Google
           </button>
         </div>
 

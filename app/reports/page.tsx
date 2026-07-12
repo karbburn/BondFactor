@@ -61,7 +61,8 @@ export default function ReportsPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch('/api/v1/reports/generate', {
+      const base = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+      const res = await fetch(`${base}/api/v1/reports/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({
@@ -101,7 +102,7 @@ export default function ReportsPage() {
         }
 
         try {
-          const pollRes = await fetch(`/api/v1/reports/${data.report_id}`, {
+          const pollRes = await fetch(`${base}/api/v1/reports/${data.report_id}`, {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
           });
           const pollData: ReportStatus = await pollRes.json();

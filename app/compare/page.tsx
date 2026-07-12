@@ -46,7 +46,7 @@ export default function ComparePage() {
           try {
             const headers: Record<string, string> = { 'Content-Type': 'application/json' };
             if (token) headers['Authorization'] = `Bearer ${token}`;
-            const res = await fetch(`/api/v1/portfolios/${id}`, { headers });
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/v1/portfolios/${id}`, { headers });
             if (!res.ok) throw new Error(`Portfolio HTTP ${res.status}`);
             const data = await res.json();
             const positions: PositionItem[] = [];

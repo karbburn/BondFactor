@@ -49,7 +49,7 @@ def bootstrap_zero_curve(par_curve_fn, max_maturity: float = 40.0, step_size: fl
         par_y = par_curve_fn(t)
         # coupon rate in decimal: par_y / 100.0
         # semi-annual coupon amount per 100 par: 100.0 * (par_y / 100.0) / 2.0 = par_y / 2.0
-        c = par_y / 2.0
+        c = par_y / (1.0 / step_size)
         
         # D(T) = (100 - c * sum(D_prev)) / (100 + c)
         df = (100.0 - c * running_sum_df) / (100.0 + c)

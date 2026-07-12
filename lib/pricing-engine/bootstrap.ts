@@ -54,7 +54,7 @@ export function bootstrapZeroCurve(
     maturities.push(t);
     
     const parY = parCurveFn(t);
-    const c = parY / 2.0; // semi-annual coupon amount per 100 par
+    const c = parY / (1.0 / stepSize);
     
     const df = (100.0 - c * runningSumDf) / (100.0 + c);
     discountFactors.push(df);

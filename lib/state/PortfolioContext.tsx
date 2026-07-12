@@ -85,7 +85,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     setActivePortfolioId(null);
     // Generate unique default name based on existing saved portfolios
     const existingNames = new Set(savedPortfolios.map(p => p.portfolio_name));
-    let candidate = "Portfolio";
+    const candidate = "Portfolio";
     let n = 1;
     while (existingNames.has(`${candidate} (${n})`)) n++;
     setActivePortfolioName(`${candidate} (${n})`);

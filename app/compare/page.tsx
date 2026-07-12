@@ -184,7 +184,7 @@ export default function ComparePage() {
                           {summary.totalPnl >= 0 ? '+' : ''}{formatCurrency(summary.totalPnl)}
                         </td>
                         <td className="num">{summary.portfolioModDur.toFixed(3)} Y</td>
-                        <td className="num">₹ {Math.round(summary.portfolioDv01).toLocaleString()}</td>
+                        <td className="num">Rs. {Math.round(summary.portfolioDv01).toLocaleString()}</td>
                         <td className="num">{summary.portfolioConvexity.toFixed(2)}</td>
                       </tr>
                     );

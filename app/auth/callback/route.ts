@@ -10,8 +10,11 @@ export async function GET(request: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     );
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      return NextResponse.redirect(origin);
+    }
   }
 
-  return NextResponse.redirect(origin);
+  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
 }

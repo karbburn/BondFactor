@@ -154,3 +154,11 @@ def test_generate_parity_outputs():
     outputs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "fixtures", "parity_outputs.json"))
     with open(outputs_path, "w", encoding="utf-8") as f:
         json.dump(outputs, f, indent=2)
+
+    for td_str, td_data in outputs["trade_dates"].items():
+        for bond_id, bond in td_data["bonds"].items():
+            for metric in ["dirty_price", "clean_price", "ytm", "macaulay_duration",
+                           "modified_duration", "dv01", "convexity", "accrued_interest"]:
+                assert np.isfinite(bond[metric]), f"{td_str}/{bond_id}/{metric} not finite"
+            for i, k in enumerate(bond["krd"]):
+                assert np.isfinite(k), f"{td_str}/{bond_id}/krd[{i}] not finite"

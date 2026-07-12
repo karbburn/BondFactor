@@ -70,7 +70,7 @@ export function calculateKeyRateDurations(
 
   const krds: number[] = [];
   for (let k = 0; k < keyTenors.length; k++) {
-    const zcPerturbed = new KRD_PerturbedZeroCurve(zc, keyTenors, k) as unknown as ZeroCurve;
+    const zcPerturbed = new KRD_PerturbedZeroCurve(zc, keyTenors, k) as unknown as ZeroCurve; // ponytail: works because calculateDirtyPrice only calls getDiscountFactor — fragile if ZeroCurve API expands
     const pPerturbed = calculateDirtyPrice(settlementDate, cashflows, zcPerturbed);
     
     // Duration calculation: percentage price change per 1% yield change

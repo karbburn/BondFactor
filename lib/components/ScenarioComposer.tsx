@@ -105,7 +105,7 @@ export default function ScenarioComposer() {
 
   // Helper for slider fill visualization
   const getSliderStyle = (val: number, min: number, max: number) => {
-    const pct = ((val - min) / (max - min)) * 100;
+    const pct = max === min ? 50 : ((val - min) / (max - min)) * 100;
     if (val >= 0) {
       return {
         background: `linear-gradient(to right, var(--bg-tertiary) 0%, var(--bg-tertiary) 50%, var(--accent) 50%, var(--accent) ${pct}%, var(--bg-tertiary) ${pct}%, var(--bg-tertiary) 100%)`

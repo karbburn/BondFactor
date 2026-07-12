@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Date, Numeric, DateTime, JSON, Boolean, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 import uuid
 
 Base = declarative_base()
@@ -48,7 +48,7 @@ class ReferenceZeroCurve(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     curve_date = Column(Date, nullable=False, index=True)
-    calibration_id = Column(String(36), ForeignKey("curve_calibrations.id"), nullable=False)
+    calibration_id = Column(String(36), ForeignKey("curve_calibrations.id", ondelete="CASCADE"), nullable=False)
     tenor_years = Column(Numeric, nullable=False)
     discount_factor = Column(Numeric, nullable=False)
     zero_rate = Column(Numeric, nullable=False)
@@ -89,8 +89,8 @@ class PortfolioPosition(Base):
     __tablename__ = "portfolio_positions"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    portfolio_id = Column(String(36), ForeignKey("portfolios.id"), nullable=False, index=True)
-    security_id = Column(String(36), ForeignKey("securities.id"), nullable=False)
+    portfolio_id = Column(String(36), ForeignKey("portfolios.id", ondelete="CASCADE"), nullable=False, index=True)
+    security_id = Column(String(36), ForeignKey("securities.id", ondelete="RESTRICT"), nullable=False)
     face_value_held = Column(Numeric, nullable=False)
     position_type = Column(String, nullable=False, default="long")
     added_at = Column(DateTime(timezone=True), nullable=False)
@@ -100,7 +100,7 @@ class ReportGeneration(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String(36), nullable=False, index=True)
-    portfolio_id = Column(String(36), ForeignKey("portfolios.id"), nullable=False)
+    portfolio_id = Column(String(36), ForeignKey("portfolios.id", ondelete="CASCADE"), nullable=False)
     format = Column(String, nullable=False)  # 'pdf' | 'xlsx'
     scenario_config = Column(JSON, nullable=False)
     status = Column(String, nullable=False, default="processing")  # 'processing' | 'completed' | 'failed'

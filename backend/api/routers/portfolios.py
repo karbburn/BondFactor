@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 from typing import Dict
+import os
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -9,6 +11,7 @@ from api.schemas import PortfolioCreate, PortfolioUpdate, PortfolioSummary, Port
 from db.session import get_db
 from db.models import Portfolio, PortfolioPosition, Security, ReportGeneration
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -89,10 +92,28 @@ def delete_portfolio(portfolio_id: str, user: Dict = Depends(get_current_user), 
     p = db.query(Portfolio).filter(Portfolio.id == portfolio_id, Portfolio.user_id == user["id"]).first()
     if not p:
         raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "Portfolio not found."})
-    db.query(ReportGeneration).filter(ReportGeneration.portfolio_id == p.id).delete()
-    db.query(PortfolioPosition).filter(PortfolioPosition.portfolio_id == p.id).delete()
-    db.delete(p)
-    db.commit()
+
+    # Collect report file paths before deleting DB records
+    reports = db.query(ReportGeneration).filter(ReportGeneration.portfolio_id == p.id).all()
+    report_files = [r.storage_path for r in reports if r.storage_path]
+
+    try:
+        db.query(ReportGeneration).filter(ReportGeneration.portfolio_id == p.id).delete()
+        db.query(PortfolioPosition).filter(PortfolioPosition.portfolio_id == p.id).delete()
+        db.delete(p)
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception(f"Failed to delete portfolio {portfolio_id}")
+        raise HTTPException(500, detail={"code": "INTERNAL_SERVER_ERROR", "message": "Failed to delete portfolio"})
+
+    # ponytail: best-effort file cleanup — don't fail the request if files are gone
+    for path in report_files:
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except OSError:
+            logger.warning(f"Could not remove report file: {path}")
 
 
 # ── Position CRUD ───────────────────────────────────────────────

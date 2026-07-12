@@ -10,3 +10,4 @@ PyJWT
 fpdf2
 openpyxl
 alembic
+psycopg2-binary

@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from db.session import get_db
 from db.models import CurveCalibration, KeyRateTenorGrid, ReferenceZeroCurve
-from api.schemas import CurveResponse, CurveSummary, KeyRateTenorResponse, TenorItem, NSSParametersSchema, CurveDiagnostics, ArchivedDateItem, ZeroCurvePoint
+from api.schemas import CurveResponse, CurveSummary, KeyRateTenorResponse, TenorItem, NSSParametersSchema, CurveDiagnostics, ArchivedDateItem, ZeroCurvePoint, HistoricalCalibrationResponse
 
 router = APIRouter()
 
@@ -118,6 +118,21 @@ def get_archived_dates(db: Session = Depends(get_db)):
             point_count=count,
         ))
     return result
+
+@router.get("/curves/historical-calibration", response_model=HistoricalCalibrationResponse)
+def get_historical_calibration(db: Session = Depends(get_db)):
+    """
+    Computes history-calibrated scenario shock magnitudes based on 95th percentile daily changes.
+    """
+    from quant_core.historical_calibration import calibrate_factor_shocks_from_history
+    calibrations = (
+        db.query(CurveCalibration)
+        .filter(CurveCalibration.is_active == True)
+        .order_by(CurveCalibration.curve_date.asc())
+        .all()
+    )
+    res = calibrate_factor_shocks_from_history(calibrations)
+    return res
 
 @router.get("/curves/{date_val}/zero-curve", response_model=List[ZeroCurvePoint])
 def get_zero_curve_by_date(date_val: date, db: Session = Depends(get_db)):

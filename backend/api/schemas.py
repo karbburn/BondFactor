@@ -135,3 +135,14 @@ class SavedScenarioResponse(BaseModel):
     twist_shock: float
     twist_pivot: float
     created_at: str
+
+class HistoricalCalibrationResponse(BaseModel):
+    parallel_shift: float
+    slope_shock: float
+    curvature1_shock: float
+    curvature2_shock: float
+    data_points: int
+    confidence_level: str
+    earliest_date: Optional[str] = None
+    latest_date: Optional[str] = None
+

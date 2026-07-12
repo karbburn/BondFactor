@@ -44,9 +44,9 @@ class KRD_PerturbedZeroCurve:
         else:  # Intermediate key rate: taper left and right
             t_prev = self.key_tenors[self.key_idx - 1]
             t_next = self.key_tenors[self.key_idx + 1]
-            if t_prev < t <= t_k:
+            if t_prev < t <= t_k and t_k > t_prev:
                 bump = 0.01 * (t - t_prev) / (t_k - t_prev)
-            elif t_k < t < t_next:
+            elif t_k < t < t_next and t_next > t_k:
                 bump = 0.01 * (t_next - t) / (t_next - t_k)
                 
         return r + bump

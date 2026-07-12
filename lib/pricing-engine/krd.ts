@@ -40,9 +40,9 @@ export class KRD_PerturbedZeroCurve {
     } else { // Intermediate key rate
       const tPrev = this.keyTenors[this.keyIdx - 1];
       const tNext = this.keyTenors[this.keyIdx + 1];
-      if (t > tPrev && t <= tK) {
+      if (t > tPrev && t <= tK && tK > tPrev) {
         bump = 0.01 * (t - tPrev) / (tK - tPrev);
-      } else if (t > tK && t < tNext) {
+      } else if (t > tK && t < tNext && tNext > tK) {
         bump = 0.01 * (tNext - t) / (tNext - tK);
       }
     }

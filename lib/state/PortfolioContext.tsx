@@ -108,18 +108,18 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
 
     // Delete existing positions on update, then re-add
     if (isUpdate && result.positions) {
-      for (const pos of result.positions) {
-        await apiFetch(`/api/v1/portfolios/${portfolioId}/positions/${pos.id}`, { method: "DELETE" });
-      }
+      await Promise.all(result.positions.map((pos: { id: string }) =>
+        apiFetch(`/api/v1/portfolios/${portfolioId}/positions/${pos.id}`, { method: "DELETE" })
+      ));
     }
 
     // Add current positions
-    for (const pos of portfolio) {
-      await apiFetch(`/api/v1/portfolios/${portfolioId}/positions`, {
+    await Promise.all(portfolio.map((pos) =>
+      apiFetch(`/api/v1/portfolios/${portfolioId}/positions`, {
         method: "POST",
         body: JSON.stringify({ security_id: pos.security.id, face_value_held: pos.faceValue }),
-      });
-    }
+      })
+    ));
 
     setActivePortfolioId(portfolioId);
     await fetchSavedPortfolios();
@@ -132,9 +132,17 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     setActivePortfolioName(data.portfolio_name);
 
     const positions: PositionItem[] = [];
+    let unresolved = 0;
     for (const pos of data.positions) {
       const sec = securities.find(s => s.id === pos.security_id || s.isin === pos.isin);
-      if (sec) positions.push({ security: sec, faceValue: pos.face_value_held });
+      if (sec) {
+        positions.push({ security: sec, faceValue: pos.face_value_held });
+      } else {
+        unresolved++;
+      }
+    }
+    if (unresolved > 0) {
+      console.warn(`${unresolved} position(s) could not be matched to active securities`);
     }
     setPortfolioState(positions);
   }, [securities]);

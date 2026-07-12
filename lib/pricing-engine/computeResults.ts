@@ -130,7 +130,6 @@ export function computePortfolioResults(
     const conv = calculateConvexity(sd, cfs, baseZc);
     const krd = calculateKeyRateDurations(sd, cfs, baseZc, DEFAULT_KEY_TENORS);
 
-    const shockedAccrued = calculateAccruedInterest(sd, issueDate, maturityDate, couponRate, freq, 100.0);
     const shockedDirtyPrice = calculateDirtyPrice(sd, cfs, shockedZc);
     const shockedCleanPrice = calculateCleanPrice(sd, issueDate, maturityDate, couponRate, cfs, shockedZc, freq, 100.0);
     const shockedDirtyValue = shockedDirtyPrice * (faceValue / 100.0);
@@ -148,7 +147,7 @@ export function computePortfolioResults(
       security: s, faceValue,
       baseAccrued, baseDirtyPrice, baseCleanPrice, baseDirtyValue, baseCleanValue,
       ytm, macDur, modDur, dv01, conv, krd,
-      shockedAccrued, shockedDirtyPrice, shockedCleanPrice, shockedDirtyValue, shockedCleanValue,
+      shockedAccrued: baseAccrued, shockedDirtyPrice, shockedCleanPrice, shockedDirtyValue, shockedCleanValue,
       shockedYtm, shockedMacDur, shockedModDur, shockedDv01, shockedConv, shockedKrd,
       pnl,
     };

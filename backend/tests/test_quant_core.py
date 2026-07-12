@@ -12,8 +12,8 @@ def test_get_settlement_date():
     assert conventions.get_settlement_date(date(2026, 4, 10)) == date(2026, 4, 13)
     # Saturday -> Monday
     assert conventions.get_settlement_date(date(2026, 4, 11)) == date(2026, 4, 13)
-    # Sunday -> Monday
-    assert conventions.get_settlement_date(date(2026, 4, 12)) == date(2026, 4, 13)
+    # Sunday -> Tuesday (markets closed Sunday, trade is effectively Monday with T+1 = Tuesday)
+    assert conventions.get_settlement_date(date(2026, 4, 12)) == date(2026, 4, 14)
 
 # Test 2: Standard Coupon Dates Generation
 def test_generate_coupon_dates_standard():

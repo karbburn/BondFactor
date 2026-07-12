@@ -83,9 +83,14 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
 
   const clearActivePortfolio = useCallback(() => {
     setActivePortfolioId(null);
-    setActivePortfolioName("Untitled Portfolio");
+    // Generate unique default name based on existing saved portfolios
+    const existingNames = new Set(savedPortfolios.map(p => p.portfolio_name));
+    let candidate = "Portfolio";
+    let n = 1;
+    while (existingNames.has(`${candidate} (${n})`)) n++;
+    setActivePortfolioName(`${candidate} (${n})`);
     setPortfolioState([]);
-  }, []);
+  }, [savedPortfolios]);
 
   const fetchSavedPortfolios = useCallback(async () => {
     try {

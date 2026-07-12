@@ -25,7 +25,7 @@ const outfit = Outfit({
 
 export const metadata: Metadata = {
   title: "BondFactor | Fixed Income Risk Engine",
-  description: "Bloomberg-inspired Indian G-Sec curve deformation and risk analytics engine.",
+  description: "Indian G-Sec yield curve deformation and risk analytics engine.",
 };
 
 export default function RootLayout({

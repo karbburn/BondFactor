@@ -1,13 +1,13 @@
 # BondFactor
 
-Professional-grade fixed-income analytics for Indian Government Securities. Fit the benchmark yield curve, deform it under economically meaningful scenarios, and see exactly how a G-Sec portfolio's value and risk profile responds — price, duration, DV01, convexity, Key Rate Duration, and scenario P&L.
+Fixed-income analytics for Indian Government Securities. Fit the benchmark yield curve, deform it under economically meaningful scenarios, and see how a G-Sec portfolio responds — price, duration, DV01, convexity, Key Rate Duration, and scenario P&L.
 
-## What It Does
+**Live:** [bondfactor.vercel.app](https://bondfactor.vercel.app) · **API:** [bondfactor-api.onrender.com](https://bondfactor-api.onrender.com)
 
-BondFactor connects three things most tools treat separately:
+## Capabilities
 
-1. **Yield curve fitting** — Nelson-Siegel-Svensson calibration to the daily G-Sec par yield curve, with cubic spline fallback on convergence failure.
-2. **Scenario deformation** — Factor-shock scenarios (parallel shift, steepener, flattener, twist, butterfly) applied as parameterized NSS perturbations, not ad-hoc rate bumps.
+1. **Yield curve fitting** — Nelson-Siegel-Svensson calibration to daily G-Sec par yields, cubic spline fallback on convergence failure.
+2. **Scenario deformation** — Factor-shock scenarios (parallel shift, steepener, flattener, twist, butterfly) applied as parameterized NSS perturbations.
 3. **Portfolio repricing** — Full risk stack recomputed client-side against the shocked curve, with DV01-weighted P&L and tenor-bucketed KRD decomposition.
 
 All calculations use standard Indian G-Sec market conventions: semi-annual coupons, Actual/Actual day count, T+1 settlement.
@@ -39,7 +39,7 @@ All calculations use standard Indian G-Sec market conventions: semi-annual coupo
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Key design decision:** The server ships fitted NSS parameters. The client always bootstraps its own zero curve — base and scenario-shocked — via a parity-tested TypeScript implementation. This means scenario repricing is entirely client-side (target ~100ms for 50 positions) with no network round-trip.
+**Key design decision:** The server ships fitted NSS parameters. The client always bootstraps its own zero curve — base and scenario-shocked — via a parity-tested TypeScript implementation. Scenario repricing is entirely client-side (target ~100ms for 50 positions) with no network round-trip.
 
 ## Quantitative Rigor
 
@@ -60,7 +60,6 @@ Full methodology documentation: `assets/02_Quant_Methodology_BondFactor.md`
 | Quant Core | scipy, numpy | Server-side |
 | Auth | Supabase Auth (JWT) | Supabase |
 | Database | PostgreSQL | Supabase |
-| CI/CD | GitHub Actions | Nightly cron + PR checks |
 
 ## Getting Started
 
@@ -156,7 +155,7 @@ BondFactor/
 │   └── components/               # Shared UI components
 ├── backend/
 │   ├── main.py                   # FastAPI application
-│   ├── api/routers/              # Endpoint definitions (curves, securities, portfolios, scenarios, reports)
+│   ├── api/routers/              # Endpoint definitions
 │   ├── api/schemas.py            # Pydantic models
 │   ├── api/dependencies.py       # Auth middleware
 │   ├── db/models.py              # SQLAlchemy models
@@ -194,9 +193,7 @@ npx tsc --noEmit
 
 ## Data Sources
 
-BondFactor uses publicly available G-Sec data:
-
-- **FBIL** — Primary source for daily par yield curves (G-Sec Par Yield, ZCYC). No public API; manual CSV ingestion path implemented.
+- **FBIL** — Primary source for daily par yield curves (G-Sec Par Yield, ZCYC). No public API; manual CSV ingestion path.
 - **RBI DBIE** — Fallback source via Database on Indian Economy.
 - **Manual CSV** — Guaranteed fallback when automated sources are unavailable.
 
@@ -216,6 +213,6 @@ Historical data availability: reliable FBIL par yield data starts from March 31,
 - **Phase 2 (Complete):** Platform features — authentication, portfolio persistence, multi-portfolio management, historical replay, PDF/Excel reporting, saved custom scenarios.
 - **Phase 3 (Indicative):** Advanced analytics — historical scenario calibration, risk attribution, performance optimization, expanded visualization.
 
-## License
+---
 
-Internal project. Not licensed for external use.
+Built by [Sourabh](https://sourabh08.vercel.app/)

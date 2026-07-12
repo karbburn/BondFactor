@@ -2,7 +2,7 @@ import { getSettlementDate, calculateAccruedInterest } from './conventions';
 import { generateCashflows } from './cashflow';
 import { bootstrapZeroCurve, ZeroCurve } from './bootstrap';
 import { calculateDirtyPrice, calculateCleanPrice, calculateYtm } from './pricing';
-import { calculateMacaulayDuration, calculateModifiedDuration, calculateDv01, calculateConvexity, calculatePositionFactorPnLDecomposition, FactorPnLDecomposition } from './risk';
+import { calculateMacaulayDuration, calculateModifiedDuration, calculateDv01, calculateConvexity, calculatePositionFactorPnLDecomposition, FactorPnLDecomposition, calculatePositionFactorPnLDecompositionOptimized, PreBootstrappedFactorCurves } from './risk';
 import { applyScenarioShocks, nssYield } from './scenario';
 import { calculateKeyRateDurations, DEFAULT_KEY_TENORS } from './krd';
 import { NSSParameters } from './types';
@@ -113,6 +113,26 @@ export function computePortfolioResults(
 
   const sd = getSettlementDate(new Date(curveDate));
 
+  // Pre-bootstrap the 8 factor-perturbed curves once at the portfolio level
+  const h = 0.01;
+  const buildCurveForParams = (b0: number, b1: number, b2: number, b3: number) => {
+    const fn = (t: number) => nssYield(t, b0, b1, b2, b3, baseParams.tau1, baseParams.tau2);
+    return bootstrapZeroCurve(fn, 40.0, 0.5);
+  };
+
+  const factorCurves: PreBootstrappedFactorCurves = {
+    baseZc,
+    shockedZc,
+    b0Up: buildCurveForParams(baseParams.beta0 + h, baseParams.beta1, baseParams.beta2, baseParams.beta3),
+    b0Down: buildCurveForParams(baseParams.beta0 - h, baseParams.beta1, baseParams.beta2, baseParams.beta3),
+    b1Up: buildCurveForParams(baseParams.beta0, baseParams.beta1 + h, baseParams.beta2, baseParams.beta3),
+    b1Down: buildCurveForParams(baseParams.beta0, baseParams.beta1 - h, baseParams.beta2, baseParams.beta3),
+    b2Up: buildCurveForParams(baseParams.beta0, baseParams.beta1, baseParams.beta2 + h, baseParams.beta3),
+    b2Down: buildCurveForParams(baseParams.beta0, baseParams.beta1, baseParams.beta2 - h, baseParams.beta3),
+    b3Up: buildCurveForParams(baseParams.beta0, baseParams.beta1, baseParams.beta2, baseParams.beta3 + h),
+    b3Down: buildCurveForParams(baseParams.beta0, baseParams.beta1, baseParams.beta2, baseParams.beta3 - h),
+  };
+
   const computedPositions: ComputedPosition[] = portfolio.map(pos => {
     const s = pos.security;
     const faceValue = pos.faceValue;
@@ -148,7 +168,7 @@ export function computePortfolioResults(
 
     const pnl = shockedDirtyValue - baseDirtyValue;
 
-    const factorPnL = calculatePositionFactorPnLDecomposition(
+    const factorPnL = calculatePositionFactorPnLDecompositionOptimized(
       sd,
       cfs,
       baseParams,
@@ -160,6 +180,7 @@ export function computePortfolioResults(
         twist_shock: shocks.twist_shock,
         twist_pivot: shocks.twist_pivot
       },
+      factorCurves,
       faceValue
     );
 

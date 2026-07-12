@@ -187,3 +187,92 @@ export function calculatePositionFactorPnLDecomposition(
   };
 }
 
+export interface PreBootstrappedFactorCurves {
+  baseZc: ZeroCurve;
+  shockedZc: ZeroCurve;
+  b0Up: ZeroCurve;
+  b0Down: ZeroCurve;
+  b1Up: ZeroCurve;
+  b1Down: ZeroCurve;
+  b2Up: ZeroCurve;
+  b2Down: ZeroCurve;
+  b3Up: ZeroCurve;
+  b3Down: ZeroCurve;
+}
+
+export function calculatePositionFactorPnLDecompositionOptimized(
+  settlementDate: Date,
+  cashflows: Cashflow[],
+  baseParams: NSSParameters,
+  shocks: {
+    parallel_shift?: number;
+    slope_shock?: number;
+    curvature1_shock?: number;
+    curvature2_shock?: number;
+    twist_shock?: number;
+    twist_pivot?: number;
+  },
+  curves: PreBootstrappedFactorCurves,
+  faceValue: number = 100.0
+): FactorPnLDecomposition {
+  const parallelShift = shocks.parallel_shift ?? 0.0;
+  const slopeShock = shocks.slope_shock ?? 0.0;
+  const curvature1Shock = shocks.curvature1_shock ?? 0.0;
+  const curvature2Shock = shocks.curvature2_shock ?? 0.0;
+  const twistShock = shocks.twist_shock ?? 0.0;
+  const twistPivot = shocks.twist_pivot ?? 5.0;
+
+  const tau1 = baseParams.tau1;
+  let g1Pivot = 0.0;
+  if (twistPivot > 0) {
+    g1Pivot = (1.0 - Math.exp(-twistPivot / tau1)) / (twistPivot / tau1);
+  } else {
+    g1Pivot = 1.0;
+  }
+
+  const deltaBeta0Twist = -twistShock * g1Pivot;
+  const deltaBeta0 = parallelShift + deltaBeta0Twist;
+  const deltaBeta1 = slopeShock + twistShock;
+  const deltaBeta2 = curvature1Shock;
+  const deltaBeta3 = curvature2Shock;
+
+  const pBase = calculateDirtyPrice(settlementDate, cashflows, curves.baseZc);
+  const pShocked = calculateDirtyPrice(settlementDate, cashflows, curves.shockedZc);
+  const totalPnL = (pShocked - pBase) * (faceValue / 100.0);
+
+  const h = 0.01;
+
+  const pB0Up = calculateDirtyPrice(settlementDate, cashflows, curves.b0Up);
+  const pB0Down = calculateDirtyPrice(settlementDate, cashflows, curves.b0Down);
+  const dB0 = (pB0Up - pB0Down) / (2.0 * h);
+
+  const pB1Up = calculateDirtyPrice(settlementDate, cashflows, curves.b1Up);
+  const pB1Down = calculateDirtyPrice(settlementDate, cashflows, curves.b1Down);
+  const dB1 = (pB1Up - pB1Down) / (2.0 * h);
+
+  const pB2Up = calculateDirtyPrice(settlementDate, cashflows, curves.b2Up);
+  const pB2Down = calculateDirtyPrice(settlementDate, cashflows, curves.b2Down);
+  const dB2 = (pB2Up - pB2Down) / (2.0 * h);
+
+  const pB3Up = calculateDirtyPrice(settlementDate, cashflows, curves.b3Up);
+  const pB3Down = calculateDirtyPrice(settlementDate, cashflows, curves.b3Down);
+  const dB3 = (pB3Up - pB3Down) / (2.0 * h);
+
+  const contribLevel = dB0 * deltaBeta0 * (faceValue / 100.0);
+  const contribSlope = dB1 * deltaBeta1 * (faceValue / 100.0);
+  const contribCurv1 = dB2 * deltaBeta2 * (faceValue / 100.0);
+  const contribCurv2 = dB3 * deltaBeta3 * (faceValue / 100.0);
+
+  const residual = totalPnL - (contribLevel + contribSlope + contribCurv1 + contribCurv2);
+
+  return {
+    level: contribLevel,
+    slope: contribSlope,
+    curvature1: contribCurv1,
+    curvature2: contribCurv2,
+    residual: residual,
+    total: totalPnL
+  };
+}
+
+

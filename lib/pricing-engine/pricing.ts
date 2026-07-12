@@ -57,12 +57,20 @@ export function calculateYtm(
     return 0.0;
   }
 
+  // Pre-calculate time fractions to avoid redundant date math inside the solver loop
+  const parsedCfs = futureCfs.map(cf => {
+    const diffDays = Math.round((cf.date.getTime() - settlementDate.getTime()) / (1000 * 60 * 60 * 24));
+    return {
+      amount: cf.amount,
+      t: diffDays / 365.0
+    };
+  });
+
   const objective = (yVal: number) => {
     let pv = 0.0;
-    for (const cf of futureCfs) {
-      const diffDays = Math.round((cf.date.getTime() - settlementDate.getTime()) / (1000 * 60 * 60 * 24));
-      const t = diffDays / 365.0;
-      pv += cf.amount / Math.pow(1.0 + yVal / (100.0 * couponFrequency), couponFrequency * t);
+    const factor = 1.0 + yVal / (100.0 * couponFrequency);
+    for (const cf of parsedCfs) {
+      pv += cf.amount / Math.pow(factor, couponFrequency * cf.t);
     }
     return pv - dirtyPrice;
   };

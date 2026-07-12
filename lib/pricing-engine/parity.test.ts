@@ -6,8 +6,8 @@ import { getSettlementDate, calculateAccruedInterest } from "./conventions";
 import { generateCashflows } from "./cashflow";
 import { bootstrapZeroCurve } from "./bootstrap";
 import { calculateDirtyPrice, calculateCleanPrice, calculateYtm } from "./pricing";
-import { calculateMacaulayDuration, calculateModifiedDuration, calculateDv01, calculateConvexity, calculatePositionFactorPnLDecomposition } from "./risk";
-import { getShockedZeroCurve, nssYield } from "./scenario";
+import { calculateMacaulayDuration, calculateModifiedDuration, calculateDv01, calculateConvexity, calculatePositionFactorPnLDecomposition, calculatePositionFactorPnLDecompositionOptimized, PreBootstrappedFactorCurves } from "./risk";
+import { getShockedZeroCurve, nssYield, applyScenarioShocks } from "./scenario";
 import { calculateKeyRateDurations } from "./krd";
 
 const fixturesPath = path.resolve(__dirname, "../../backend/tests/fixtures/parity_fixtures.json");
@@ -187,6 +187,36 @@ describe("TypeScript vs Python Reference Parity Tests", () => {
               expect(factorPnL.curvature2).toBeCloseTo(pyBond.factor_pnl.curvature2, 4);
               expect(factorPnL.residual).toBeCloseTo(pyBond.factor_pnl.residual, 4);
               expect(factorPnL.total).toBeCloseTo(pyBond.factor_pnl.total, 4);
+
+              // Optimized Factor P&L Parity — pre-bootstrapped curves must produce identical output
+              const baseNss = fixtures.baseline_nss;
+              const h = 0.01;
+              const parCurveFn = (t: number) => nssYield(t, baseNss.beta0, baseNss.beta1, baseNss.beta2, baseNss.beta3, baseNss.tau1, baseNss.tau2);
+              const shockedNss = applyScenarioShocks(baseNss, scen.shocks);
+              const curves: PreBootstrappedFactorCurves = {
+                baseZc: bootstrapZeroCurve(parCurveFn, 40.0, 0.5),
+                shockedZc: bootstrapZeroCurve(
+                  (t: number) => nssYield(t, shockedNss.beta0, shockedNss.beta1, shockedNss.beta2, shockedNss.beta3, baseNss.tau1, baseNss.tau2),
+                  40.0, 0.5
+                ),
+                b0Up: bootstrapZeroCurve((t: number) => nssYield(t, baseNss.beta0 + h, baseNss.beta1, baseNss.beta2, baseNss.beta3, baseNss.tau1, baseNss.tau2), 40.0, 0.5),
+                b0Down: bootstrapZeroCurve((t: number) => nssYield(t, baseNss.beta0 - h, baseNss.beta1, baseNss.beta2, baseNss.beta3, baseNss.tau1, baseNss.tau2), 40.0, 0.5),
+                b1Up: bootstrapZeroCurve((t: number) => nssYield(t, baseNss.beta0, baseNss.beta1 + h, baseNss.beta2, baseNss.beta3, baseNss.tau1, baseNss.tau2), 40.0, 0.5),
+                b1Down: bootstrapZeroCurve((t: number) => nssYield(t, baseNss.beta0, baseNss.beta1 - h, baseNss.beta2, baseNss.beta3, baseNss.tau1, baseNss.tau2), 40.0, 0.5),
+                b2Up: bootstrapZeroCurve((t: number) => nssYield(t, baseNss.beta0, baseNss.beta1, baseNss.beta2 + h, baseNss.beta3, baseNss.tau1, baseNss.tau2), 40.0, 0.5),
+                b2Down: bootstrapZeroCurve((t: number) => nssYield(t, baseNss.beta0, baseNss.beta1, baseNss.beta2 - h, baseNss.beta3, baseNss.tau1, baseNss.tau2), 40.0, 0.5),
+                b3Up: bootstrapZeroCurve((t: number) => nssYield(t, baseNss.beta0, baseNss.beta1, baseNss.beta2, baseNss.beta3 + h, baseNss.tau1, baseNss.tau2), 40.0, 0.5),
+                b3Down: bootstrapZeroCurve((t: number) => nssYield(t, baseNss.beta0, baseNss.beta1, baseNss.beta2, baseNss.beta3 - h, baseNss.tau1, baseNss.tau2), 40.0, 0.5),
+              };
+              const factorPnLOpt = calculatePositionFactorPnLDecompositionOptimized(
+                sd, cashflows, fixtures.baseline_nss, scen.shocks, curves, bond.face_value
+              );
+              expect(factorPnLOpt.level).toBeCloseTo(factorPnL.level, 10);
+              expect(factorPnLOpt.slope).toBeCloseTo(factorPnL.slope, 10);
+              expect(factorPnLOpt.curvature1).toBeCloseTo(factorPnL.curvature1, 10);
+              expect(factorPnLOpt.curvature2).toBeCloseTo(factorPnL.curvature2, 10);
+              expect(factorPnLOpt.residual).toBeCloseTo(factorPnL.residual, 10);
+              expect(factorPnLOpt.total).toBeCloseTo(factorPnL.total, 10);
             });
           }
         });

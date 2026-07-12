@@ -7,7 +7,7 @@ from sqlalchemy import func
 from api.dependencies import get_current_user
 from api.schemas import PortfolioCreate, PortfolioUpdate, PortfolioSummary, PortfolioDetail, PositionCreate, PositionResponse
 from db.session import get_db
-from db.models import Portfolio, PortfolioPosition, Security
+from db.models import Portfolio, PortfolioPosition, Security, ReportGeneration
 
 router = APIRouter()
 
@@ -89,6 +89,7 @@ def delete_portfolio(portfolio_id: str, user: Dict = Depends(get_current_user), 
     p = db.query(Portfolio).filter(Portfolio.id == portfolio_id, Portfolio.user_id == user["id"]).first()
     if not p:
         raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "Portfolio not found."})
+    db.query(ReportGeneration).filter(ReportGeneration.portfolio_id == p.id).delete()
     db.query(PortfolioPosition).filter(PortfolioPosition.portfolio_id == p.id).delete()
     db.delete(p)
     db.commit()

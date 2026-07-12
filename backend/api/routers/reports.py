@@ -50,7 +50,7 @@ def create_report(
     db.commit()
     db.refresh(rec)
 
-    background_tasks.add_task(generate_report, rec.id, db)
+    background_tasks.add_task(generate_report, rec.id)
 
     return ReportResponse(
         report_id=rec.id,

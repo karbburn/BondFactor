@@ -82,7 +82,7 @@ export function calculateYtm(
     fLow = objective(low);
     fHigh = objective(high);
     if (fLow * fHigh > 0) {
-      return 0.0;
+      throw new Error("YTM solver failed to converge");
     }
   }
 

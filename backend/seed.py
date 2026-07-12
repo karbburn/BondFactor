@@ -3,12 +3,23 @@ import os
 import sys
 from datetime import date, datetime, timezone
 from uuid import uuid4
+import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 from sqlalchemy import create_engine, text
+from quant_core.nss import nss_yield
 
-DATABASE_URL = os.environ["DATABASE_URL"]
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    # Load from .env
+    from pathlib import Path
+    for line in Path(__file__).parent.joinpath(".env").read_text().splitlines():
+        if line.startswith("DATABASE_URL="):
+            DATABASE_URL = line.split("=", 1)[1]
+            break
+if not DATABASE_URL:
+    raise SystemExit("DATABASE_URL not set and not found in .env")
 
 engine = create_engine(DATABASE_URL, connect_args={"options": "-c client_encoding=utf8"})
 
@@ -34,6 +45,9 @@ SECURITIES = [
     ("IN0020250401", "7.26% GS 2036", "2026-01-15", "2036-01-15", 7.26, 2, 100.0, "10Y", True),
     ("IN0020250501", "7.40% GS 2056", "2026-01-15", "2056-01-15", 7.40, 2, 100.0, "30Y", True),
 ]
+
+# Baseline NSS parameters from golden reference
+NSS_PARAMS = {"beta0": 7.2, "beta1": -1.5, "beta2": 2.0, "beta3": -0.8, "tau1": 1.5, "tau2": 6.0}
 
 
 def seed():
@@ -62,6 +76,40 @@ def seed():
             print(f"Seeded {len(SECURITIES)} securities.")
         else:
             print(f"securities already has {existing} rows, skipping.")
+
+        # Curve calibration + zero curve
+        existing_cal = conn.execute(text("SELECT COUNT(*) FROM curve_calibrations")).scalar()
+        if existing_cal == 0:
+            cal_id = str(uuid4())
+            curve_date = date(2026, 7, 10)
+
+            conn.execute(
+                text("""INSERT INTO curve_calibrations
+                    (id, curve_date, model_type, is_active, beta0, beta1, beta2, beta3, tau1, tau2,
+                     optimizer_converged, fit_residual_error, validation_status, created_at)
+                    VALUES (:id, :date, 'nss', true, :b0, :b1, :b2, :b3, :t1, :t2,
+                     true, 0.0001, 'passed', :now)"""),
+                {"id": cal_id, "date": curve_date, "b0": NSS_PARAMS["beta0"], "b1": NSS_PARAMS["beta1"],
+                 "b2": NSS_PARAMS["beta2"], "b3": NSS_PARAMS["beta3"], "t1": NSS_PARAMS["tau1"],
+                 "t2": NSS_PARAMS["tau2"], "now": now},
+            )
+            print("Seeded curve calibration.")
+
+            tenors = np.array([k[1] for k in KEY_TENORS])
+            zero_rates = nss_yield(tenors, **NSS_PARAMS) / 100.0
+            discount_factors = np.exp(-zero_rates * tenors)
+
+            for t, zr, df in zip(tenors, zero_rates, discount_factors):
+                conn.execute(
+                    text("""INSERT INTO reference_zero_curves
+                        (id, curve_date, calibration_id, tenor_years, discount_factor, zero_rate)
+                        VALUES (:id, :date, :cal_id, :tenor, :df, :zr)"""),
+                    {"id": str(uuid4()), "date": curve_date, "cal_id": cal_id,
+                     "tenor": float(t), "df": float(df), "zr": float(zr)},
+                )
+            print(f"Seeded {len(tenors)} zero curve points.")
+        else:
+            print(f"curve_calibrations already has {existing_cal} rows, skipping.")
 
     print("Done.")
 

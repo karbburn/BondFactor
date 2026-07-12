@@ -9,6 +9,7 @@ from api.schemas import ReportGenerateRequest, ReportResponse
 from api.dependencies import get_current_user
 from services.report_generator import generate_report, REPORTS_DIR
 
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 router = APIRouter()
 
 
@@ -70,12 +71,13 @@ def get_report_status(
 
     download_url = None
     if rec.status == "completed" and rec.storage_path:
-        download_url = f"/api/v1/reports/{report_id}/download"
+        download_url = f"{BACKEND_URL}/api/v1/reports/{report_id}/download"
 
     return ReportResponse(
         report_id=rec.id,
         status=rec.status,
         download_url=download_url,
+        error_message=rec.error_message if rec.status == "failed" else None,
     )
 
 
@@ -95,9 +97,13 @@ def download_report(
     if rec.status != "completed" or not rec.storage_path:
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Report not ready"})
 
+    real_path = os.path.realpath(rec.storage_path)
+    reports_dir = os.path.realpath(REPORTS_DIR)
+    if not real_path.startswith(reports_dir + os.sep):
+        raise HTTPException(status_code=403, detail="Access denied")
+    if not os.path.exists(real_path):
+        raise HTTPException(status_code=410, detail={"code": "GONE", "message": "Report file no longer available"})
+
     media = "application/pdf" if rec.format == "pdf" else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     filename = f"bondfactor_report_{report_id[:8]}.{rec.format}"
-    real_path = os.path.realpath(rec.storage_path)
-    if not os.path.realpath(REPORTS_DIR) in real_path:
-        raise HTTPException(status_code=403, detail="Access denied")
-    return FileResponse(rec.storage_path, media_type=media, filename=filename)
+    return FileResponse(real_path, media_type=media, filename=filename, content_length=os.path.getsize(real_path))

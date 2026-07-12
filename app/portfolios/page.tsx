@@ -2,12 +2,14 @@
 
 import React, { useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { usePortfolio } from '../../lib/state/PortfolioContext';
 import { useAuth } from '../../lib/state/AuthContext';
 
 export default function SavedPortfoliosPage() {
   const { user } = useAuth();
-  const { savedPortfolios, fetchSavedPortfolios, loadPortfolio, deleteSavedPortfolio } = usePortfolio();
+  const router = useRouter();
+  const { savedPortfolios, fetchSavedPortfolios, loadPortfolio, deleteSavedPortfolio, compareIds, toggleCompare, clearCompare } = usePortfolio();
 
   useEffect(() => { if (user) fetchSavedPortfolios(); }, [user, fetchSavedPortfolios]);
 
@@ -28,7 +30,21 @@ export default function SavedPortfoliosPage() {
       <div className="panel" style={{ maxWidth: '700px', margin: '2rem auto' }}>
         <div className="panel-header">
           <span className="panel-title">Saved Portfolios</span>
-          <Link href="/portfolio" className="btn font-mono" style={{ fontSize: '11px' }}>+ NEW</Link>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {compareIds.length >= 2 && (
+              <button className="btn font-mono" style={{ fontSize: '11px' }}
+                onClick={() => router.push('/compare')}>
+                COMPARE ({compareIds.length})
+              </button>
+            )}
+            {compareIds.length > 0 && (
+              <button className="btn btn-danger font-mono" style={{ fontSize: '11px' }}
+                onClick={clearCompare}>
+                CLEAR
+              </button>
+            )}
+            <Link href="/portfolio" className="btn font-mono" style={{ fontSize: '11px' }}>+ NEW</Link>
+          </div>
         </div>
         {savedPortfolios.length === 0 ? (
           <div className="font-mono text-secondary" style={{ padding: '20px 0', textAlign: 'center' }}>
@@ -38,6 +54,7 @@ export default function SavedPortfoliosPage() {
           <table className="dense-table">
             <thead>
               <tr>
+                <th style={{ width: '30px' }}></th>
                 <th>Name</th>
                 <th className="num">Positions</th>
                 <th>Updated</th>
@@ -47,6 +64,14 @@ export default function SavedPortfoliosPage() {
             <tbody>
               {savedPortfolios.map(sp => (
                 <tr key={sp.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={compareIds.includes(sp.id)}
+                      onChange={() => toggleCompare(sp.id)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  </td>
                   <td>{sp.portfolio_name}</td>
                   <td className="num">{sp.position_count}</td>
                   <td className="font-mono" style={{ fontSize: '11px' }}>{new Date(sp.updated_at).toLocaleDateString()}</td>

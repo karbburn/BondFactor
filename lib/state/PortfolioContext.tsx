@@ -44,14 +44,26 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [savedPortfolios, setSavedPortfolios] = useState<SavedPortfolio[]>([]);
   const [activePortfolioId, setActivePortfolioId] = useState<string | null>(null);
   const [activePortfolioName, setActivePortfolioName] = useState<string>("Untitled Portfolio");
-  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [compareIds, setCompareIds] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try { return JSON.parse(localStorage.getItem('compareIds') || '[]'); } catch { return []; }
+    }
+    return [];
+  });
   const { securities } = useCurve();
 
   const toggleCompare = useCallback((id: string) => {
-    setCompareIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setCompareIds(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      localStorage.setItem('compareIds', JSON.stringify(next));
+      return next;
+    });
   }, []);
 
-  const clearCompare = useCallback(() => { setCompareIds([]); }, []);
+  const clearCompare = useCallback(() => {
+    setCompareIds([]);
+    localStorage.removeItem('compareIds');
+  }, []);
 
   const addPosition = useCallback((security: SecurityItem, faceValue: number) => {
     setPortfolioState(prev => {

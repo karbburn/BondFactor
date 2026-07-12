@@ -17,13 +17,19 @@ async def get_current_user(authorization: str = Header(None)) -> Dict:
         )
 
     token = authorization.split(" ", 1)[1]
-    supabase_url = os.getenv("SUPABASE_URL", "")
-    service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    supabase_url = os.getenv("SUPABASE_URL")
+    service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
     if not supabase_url:
         raise HTTPException(
             status_code=500,
             detail={"code": "INTERNAL_SERVER_ERROR", "message": "SUPABASE_URL is not configured."},
+        )
+
+    if not service_key:
+        raise HTTPException(
+            status_code=500,
+            detail={"code": "INTERNAL_SERVER_ERROR", "message": "SUPABASE_SERVICE_ROLE_KEY is not configured."},
         )
 
     try:

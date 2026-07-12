@@ -107,7 +107,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await apiFetch("/api/v1/portfolios");
       setSavedPortfolios(data);
-    } catch { /* silent */ }
+    } catch (e) { console.error('Failed to fetch portfolios:', e); }
   }, []);
 
   const savePortfolio = useCallback(async () => {

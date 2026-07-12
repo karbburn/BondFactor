@@ -55,3 +55,10 @@ next-env.d.ts
 
 # Manual data files
 /backend/data/
+
+# Dev scripts (temporary, not for commit)
+/backend/test_conn.py
+/backend/run_migration.py
+/backend/verify_tables.py
+/backend/gen_ddl.py
+/backend/schema.sql

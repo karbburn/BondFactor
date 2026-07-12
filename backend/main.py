@@ -4,11 +4,6 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.routers import curves, securities, portfolios, reports, scenarios, internal
-from db.session import engine
-from db.models import Base
-
-# Create database tables at startup (safe no-op if they already exist)
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="BondFactor API",

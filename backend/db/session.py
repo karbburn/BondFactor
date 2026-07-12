@@ -3,13 +3,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from typing import Generator
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# Fallback to SQLite file for testing and local run if not configured
+# For tests only: fall back to SQLite if DATABASE_URL not set
 if not DATABASE_URL:
     DATABASE_URL = "sqlite:///bondfactor.db"
 
-# connect_args={"check_same_thread": False} is required only for SQLite
 connect_args = {}
 if DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}

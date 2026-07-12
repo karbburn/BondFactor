@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+import os
 
 from api.routers import curves, securities, portfolios, reports, scenarios, internal
 
@@ -12,12 +13,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
+ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "https://bondfactor.vercel.app,http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://bondfactor.vercel.app",
-        "http://localhost:3000",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -114,6 +114,7 @@ class ReportResponse(BaseModel):
     report_id: str
     status: str
     download_url: Optional[str] = None
+    error_message: Optional[str] = None
 
 class SavedScenarioCreate(BaseModel):
     scenario_name: str

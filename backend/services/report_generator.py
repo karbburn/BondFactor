@@ -2,8 +2,7 @@ import os
 import logging
 import numpy as np
 from datetime import datetime, timezone
-from sqlalchemy.orm import Session
-
+from db.session import SessionLocal
 from db.models import (
     Portfolio, PortfolioPosition, Security, CurveCalibration, ReportGeneration,
 )
@@ -102,16 +101,18 @@ def _aggregate(positions):
     }
 
 
-def generate_report(report_id: str, db: Session):
+def generate_report(report_id: str):
     """Background task: re-derives portfolio/scenario results server-side and renders document."""
-    os.makedirs(REPORTS_DIR, exist_ok=True)
-
-    rec = db.query(ReportGeneration).filter(ReportGeneration.id == report_id).first()
-    if not rec:
-        logger.error(f"Report record {report_id} not found")
-        return
-
+    # ponytail: fresh session — request-scoped db is closed before this runs
+    db = SessionLocal()
     try:
+        os.makedirs(REPORTS_DIR, exist_ok=True)
+
+        rec = db.query(ReportGeneration).filter(ReportGeneration.id == report_id).first()
+        if not rec:
+            logger.error(f"Report record {report_id} not found")
+            return
+
         # Load portfolio
         portfolio = db.query(Portfolio).filter(Portfolio.id == rec.portfolio_id).first()
         if not portfolio:
@@ -194,9 +195,16 @@ def generate_report(report_id: str, db: Session):
 
     except Exception as e:
         logger.error(f"Report {report_id} failed: {e}")
-        rec.status = "failed"
-        rec.error_message = str(e)
-        db.commit()
+        try:
+            rec = db.query(ReportGeneration).filter(ReportGeneration.id == report_id).first()
+            if rec:
+                rec.status = "failed"
+                rec.error_message = str(e)
+                db.commit()
+        except Exception:
+            logger.error(f"Failed to update report {report_id} status")
+    finally:
+        db.close()
 
 
 def _render_pdf(path, portfolio_name, curve_date, scenario_results, base_zc_data):
@@ -235,12 +243,12 @@ def _render_pdf(path, portfolio_name, curve_date, scenario_results, base_zc_data
         pdf.cell(0, 7, "Portfolio Risk Summary", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Helvetica", "", 9)
         for label, val, fmt in [
-            ("Total Base Dirty Value", agg["total_base_dirty"], "₹{:,.2f}"),
-            ("Total Base Clean Value", agg["total_base_clean"], "₹{:,.2f}"),
-            ("Total Shocked Dirty Value", agg["total_shocked_dirty"], "₹{:,.2f}"),
-            ("Scenario P&L", agg["total_pnl"], "₹{:+,.2f}"),
+            ("Total Base Dirty Value", agg["total_base_dirty"], "INR {:,.2f}"),
+            ("Total Base Clean Value", agg["total_base_clean"], "INR {:,.2f}"),
+            ("Total Shocked Dirty Value", agg["total_shocked_dirty"], "INR {:,.2f}"),
+            ("Scenario P&L", agg["total_pnl"], "INR {:+,.2f}"),
             ("Modified Duration", agg["port_mod_dur"], "{:.4f} Y"),
-            ("Total DV01", agg["total_dv01"], "₹{:,.2f}"),
+            ("Total DV01", agg["total_dv01"], "INR {:,.2f}"),
             ("Convexity", agg["port_convexity"], "{:.4f}"),
         ]:
             pdf.cell(80, 6, label + ":")

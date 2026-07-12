@@ -1,12 +1,13 @@
 import os
-import jwt
+import httpx
 from fastapi import Header, HTTPException
 from typing import Dict
 
-async def get_current_user(authorization: str = Header(None)) -> Dict:
-    """Validates a Supabase-issued Bearer token and returns the user payload.
 
-    Verifies locally using the JWT secret — no network call to Supabase.
+async def get_current_user(authorization: str = Header(None)) -> Dict:
+    """Validates a Supabase-issued Bearer token via Supabase's /auth/v1/user endpoint.
+
+    Avoids manual JWT decode — lets Supabase verify its own tokens regardless of algorithm.
     Raises 401 on missing, invalid, or expired tokens.
     """
     if not authorization or not authorization.startswith("Bearer "):
@@ -16,34 +17,37 @@ async def get_current_user(authorization: str = Header(None)) -> Dict:
         )
 
     token = authorization.split(" ", 1)[1]
-    secret = os.getenv("SUPABASE_JWT_SECRET", "")
+    supabase_url = os.getenv("SUPABASE_URL", "")
+    service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
-    if not secret:
+    if not supabase_url:
         raise HTTPException(
             status_code=500,
-            detail={"code": "INTERNAL_SERVER_ERROR", "message": "SUPABASE_JWT_SECRET is not configured."},
+            detail={"code": "INTERNAL_SERVER_ERROR", "message": "SUPABASE_URL is not configured."},
         )
 
     try:
-        payload = jwt.decode(
-            token,
-            secret,
-            algorithms=["HS256"],
-            options={"verify_aud": False},
-        )
-    except jwt.ExpiredSignatureError:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{supabase_url}/auth/v1/user",
+                headers={"Authorization": f"Bearer {token}", "apikey": service_key},
+                timeout=10.0,
+            )
+    except httpx.RequestError:
         raise HTTPException(
-            status_code=401,
-            detail={"code": "UNAUTHORIZED", "message": "Token has expired."},
-        )
-    except jwt.InvalidTokenError:
-        raise HTTPException(
-            status_code=401,
-            detail={"code": "UNAUTHORIZED", "message": "Invalid authentication token."},
+            status_code=502,
+            detail={"code": "BAD_GATEWAY", "message": "Unable to reach Supabase auth service."},
         )
 
+    if resp.status_code != 200:
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "UNAUTHORIZED", "message": "Invalid or expired token."},
+        )
+
+    data = resp.json()
     return {
-        "id": payload.get("sub"),
-        "email": payload.get("email"),
-        "role": payload.get("role"),
+        "id": data.get("id"),
+        "email": data.get("email"),
+        "role": data.get("role"),
     }

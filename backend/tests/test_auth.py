@@ -1,45 +1,38 @@
 import os
-import time
 import pytest
-import jwt
+from unittest.mock import AsyncMock, patch, MagicMock
 from fastapi.testclient import TestClient
 
-# Set JWT secret before importing app
-os.environ.setdefault("SUPABASE_JWT_SECRET", "test-secret-for-unit-tests-only")
+os.environ.setdefault("SUPABASE_URL", "https://test.supabase.co")
+os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-key")
 
 from main import app
 from api.dependencies import get_current_user
 
 client = TestClient(app)
 
-TEST_SECRET = os.environ["SUPABASE_JWT_SECRET"]
 
-
-def _make_token(sub: str = "user-uuid-123", email: str = "test@example.com",
-                exp: int | None = None, aud: str = "authenticated",
-                secret: str = TEST_SECRET) -> str:
-    payload = {
-        "sub": sub,
-        "email": email,
-        "role": "authenticated",
-        "aud": aud,
-        "iss": "https://test.supabase.co/auth/v1",
-        "iat": int(time.time()),
-    }
-    if exp is not None:
-        payload["exp"] = exp
-    return jwt.encode(payload, secret, algorithm="HS256")
+def _mock_supabase_response(status_code: int = 200, json_data: dict | None = None):
+    resp = MagicMock()
+    resp.status_code = status_code
+    resp.json.return_value = json_data or {}
+    return resp
 
 
 # --- get_current_user dependency tests ---
 
 def test_valid_token_returns_user():
-    token = _make_token()
-    # FastAPI TestClient doesn't directly invoke async deps, so test via raw call
-    import asyncio
-    result = asyncio.get_event_loop().run_until_complete(
-        get_current_user(authorization=f"Bearer {token}")
-    )
+    user_data = {"id": "user-uuid-123", "email": "test@example.com", "role": "authenticated"}
+    with patch("api.dependencies.httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.get.return_value = _mock_supabase_response(200, user_data)
+        mock_client_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        import asyncio
+        result = asyncio.get_event_loop().run_until_complete(
+            get_current_user(authorization="Bearer some-token")
+        )
     assert result["id"] == "user-uuid-123"
     assert result["email"] == "test@example.com"
     assert result["role"] == "authenticated"
@@ -65,55 +58,61 @@ def test_malformed_header_raises_401():
     assert exc_info.value.status_code == 401
 
 
-def test_invalid_token_raises_401():
-    import asyncio
-    from fastapi import HTTPException
-    with pytest.raises(HTTPException) as exc_info:
-        asyncio.get_event_loop().run_until_complete(
-            get_current_user(authorization="Bearer not-a-real-jwt")
-        )
-    assert exc_info.value.status_code == 401
-
-
 def test_expired_token_raises_401():
-    import asyncio
-    from fastapi import HTTPException
-    expired = _make_token(exp=int(time.time()) - 3600)
-    with pytest.raises(HTTPException) as exc_info:
-        asyncio.get_event_loop().run_until_complete(
-            get_current_user(authorization=f"Bearer {expired}")
-        )
+    with patch("api.dependencies.httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.get.return_value = _mock_supabase_response(401, {"msg": "Token has expired"})
+        mock_client_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        import asyncio
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException) as exc_info:
+            asyncio.get_event_loop().run_until_complete(
+                get_current_user(authorization="Bearer expired-token")
+            )
     assert exc_info.value.status_code == 401
 
 
-def test_wrong_secret_raises_401():
-    import asyncio
-    from fastapi import HTTPException
-    token = _make_token(secret="wrong-secret")
-    with pytest.raises(HTTPException) as exc_info:
-        asyncio.get_event_loop().run_until_complete(
-            get_current_user(authorization=f"Bearer {token}")
-        )
+def test_invalid_token_raises_401():
+    with patch("api.dependencies.httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.get.return_value = _mock_supabase_response(401, {"msg": "Invalid token"})
+        mock_client_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        import asyncio
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException) as exc_info:
+            asyncio.get_event_loop().run_until_complete(
+                get_current_user(authorization="Bearer garbage-token")
+            )
     assert exc_info.value.status_code == 401
 
 
-def test_any_audience_accepted():
-    """After removing audience verification, any aud value should be accepted."""
-    import asyncio
-    token = _make_token(aud="anon")
-    result = asyncio.get_event_loop().run_until_complete(
-        get_current_user(authorization=f"Bearer {token}")
-    )
-    assert result["id"] is not None
-
-
-def test_missing_env_var_returns_500(monkeypatch):
+def test_missing_env_url_returns_500(monkeypatch):
     import asyncio
     from fastapi import HTTPException
-    monkeypatch.setenv("SUPABASE_JWT_SECRET", "")
-    token = _make_token()
+    monkeypatch.setattr(os, "getenv", lambda key, default="": "" if key == "SUPABASE_URL" else default)
     with pytest.raises(HTTPException) as exc_info:
         asyncio.get_event_loop().run_until_complete(
-            get_current_user(authorization=f"Bearer {token}")
+            get_current_user(authorization="Bearer some-token")
         )
     assert exc_info.value.status_code == 500
+
+
+def test_supabase_unreachable_returns_502():
+    import httpx
+    with patch("api.dependencies.httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.get.side_effect = httpx.RequestError("connection refused")
+        mock_client_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        import asyncio
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException) as exc_info:
+            asyncio.get_event_loop().run_until_complete(
+                get_current_user(authorization="Bearer some-token")
+            )
+    assert exc_info.value.status_code == 502

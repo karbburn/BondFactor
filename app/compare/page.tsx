@@ -5,6 +5,7 @@ import { useCurve } from '../../lib/state/CurveContext';
 import { usePortfolio, PositionItem } from '../../lib/state/PortfolioContext';
 import { useScenario } from '../../lib/state/ScenarioContext';
 import { buildZeroCurve, applyShocks, computePortfolioResults, ScenarioShocks } from '../../lib/pricing-engine/computeResults';
+import { FALLBACK_NSS_PARAMS } from '../../lib/pricing-engine/constants';
 import { getSupabase } from '../../lib/supabase/client';
 import PortfolioComparisonPanel from '../../lib/components/PortfolioComparisonPanel';
 import ScenarioComposer from '../../lib/components/ScenarioComposer';
@@ -85,7 +86,7 @@ export default function ComparePage() {
 
   const baseParams = useMemo(() => {
     if (curve?.parameters) return curve.parameters;
-    return { beta0: 7.2, beta1: -1.5, beta2: 2.0, beta3: -0.8, tau1: 1.5, tau2: 6.0 };
+    return FALLBACK_NSS_PARAMS;
   }, [curve]);
 
   const shocks: ScenarioShocks = useMemo(() => ({

@@ -19,9 +19,6 @@ def create_report(
     user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if req.format not in ("pdf", "xlsx"):
-        raise HTTPException(status_code=422, detail={"code": "VALIDATION_ERROR", "message": "format must be 'pdf' or 'xlsx'"})
-
     if not req.scenarios:
         raise HTTPException(status_code=422, detail={"code": "VALIDATION_ERROR", "message": "At least one scenario is required"})
 
@@ -50,7 +47,7 @@ def create_report(
     db.commit()
     db.refresh(rec)
 
-    background_tasks.add_task(generate_report, rec.id, db)
+    background_tasks.add_task(generate_report, rec.id)
 
     return ReportResponse(
         report_id=rec.id,
@@ -100,4 +97,7 @@ def download_report(
 
     media = "application/pdf" if rec.format == "pdf" else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     filename = f"bondfactor_report_{report_id[:8]}.{rec.format}"
+    real_path = os.path.realpath(rec.storage_path)
+    if not os.path.realpath(REPORTS_DIR) in real_path:
+        raise HTTPException(status_code=403, detail="Access denied")
     return FileResponse(rec.storage_path, media_type=media, filename=filename)

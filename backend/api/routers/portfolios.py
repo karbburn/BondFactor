@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Dict
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from api.dependencies import get_current_user
 from api.schemas import PortfolioCreate, PortfolioUpdate, PortfolioSummary, PortfolioDetail, PositionCreate, PositionResponse
@@ -32,15 +33,20 @@ def _validate_position(db: Session, security_id: str, face_value: float):
 
 @router.get("", response_model=list[PortfolioSummary])
 def list_portfolios(user: Dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    rows = db.query(Portfolio).filter(Portfolio.user_id == user["id"]).all()
-    result = []
-    for p in rows:
-        count = db.query(PortfolioPosition).filter(PortfolioPosition.portfolio_id == p.id).count()
-        result.append(PortfolioSummary(
+    rows = (
+        db.query(Portfolio, func.count(PortfolioPosition.id).label('position_count'))
+        .outerjoin(PortfolioPosition, PortfolioPosition.portfolio_id == Portfolio.id)
+        .filter(Portfolio.user_id == user["id"])
+        .group_by(Portfolio.id)
+        .all()
+    )
+    return [
+        PortfolioSummary(
             id=p.id, portfolio_name=p.portfolio_name, position_count=count,
             created_at=p.created_at.isoformat(), updated_at=p.updated_at.isoformat(),
-        ))
-    return result
+        )
+        for p, count in rows
+    ]
 
 
 @router.post("", status_code=201, response_model=PortfolioDetail)
@@ -127,12 +133,13 @@ def delete_position(portfolio_id: str, position_id: str, user: Dict = Depends(ge
 # ── Helpers ─────────────────────────────────────────────────────
 
 def _get_positions(db: Session, portfolio_id: str):
-    rows = db.query(PortfolioPosition).filter(PortfolioPosition.portfolio_id == portfolio_id).all()
-    results = []
-    for pos in rows:
-        sec = db.query(Security).filter(Security.id == pos.security_id).first()
-        results.append(_position_response(pos, sec))
-    return results
+    rows = (
+        db.query(PortfolioPosition, Security)
+        .join(Security, PortfolioPosition.security_id == Security.id)
+        .filter(PortfolioPosition.portfolio_id == portfolio_id)
+        .all()
+    )
+    return [_position_response(pos, sec) for pos, sec in rows]
 
 
 def _position_response(pos: PortfolioPosition, sec: Security | None):

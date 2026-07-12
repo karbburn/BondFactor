@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Literal
 from datetime import date
 
 class NSSParametersSchema(BaseModel):
@@ -107,7 +107,7 @@ class ScenarioConfig(BaseModel):
 
 class ReportGenerateRequest(BaseModel):
     portfolio_id: str
-    format: str  # 'pdf' | 'xlsx'
+    format: Literal["pdf", "xlsx"]
     scenarios: List[ScenarioConfig]
 
 class ReportResponse(BaseModel):

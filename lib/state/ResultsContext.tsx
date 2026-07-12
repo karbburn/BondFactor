@@ -7,6 +7,7 @@ import { useScenario } from './ScenarioContext';
 
 import { buildZeroCurve, applyShocks, computePortfolioResults, ScenarioShocks, ComputedPosition, PortfolioSummary } from '../pricing-engine/computeResults';
 import { ZeroCurve } from '../pricing-engine/bootstrap';
+import { FALLBACK_NSS_PARAMS } from '../pricing-engine/constants';
 export type { ComputedPosition, PortfolioSummary };
 
 interface ResultsContextType {
@@ -25,7 +26,7 @@ export function ResultsProvider({ children }: { children: React.ReactNode }) {
 
   const baseParams = useMemo(() => {
     if (curve?.parameters) return curve.parameters;
-    return { beta0: 7.2, beta1: -1.5, beta2: 2.0, beta3: -0.8, tau1: 1.5, tau2: 6.0 };
+    return FALLBACK_NSS_PARAMS;
   }, [curve]);
 
   const shocks: ScenarioShocks = useMemo(() => ({

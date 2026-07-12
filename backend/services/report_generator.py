@@ -2,7 +2,7 @@ import os
 import logging
 import numpy as np
 from datetime import datetime, timezone
-from sqlalchemy.orm import Session
+from db.session import SessionLocal
 
 from db.models import (
     Portfolio, PortfolioPosition, Security, CurveCalibration, ReportGeneration,
@@ -102,16 +102,17 @@ def _aggregate(positions):
     }
 
 
-def generate_report(report_id: str, db: Session):
+def generate_report(report_id: str):
     """Background task: re-derives portfolio/scenario results server-side and renders document."""
     os.makedirs(REPORTS_DIR, exist_ok=True)
-
-    rec = db.query(ReportGeneration).filter(ReportGeneration.id == report_id).first()
-    if not rec:
-        logger.error(f"Report record {report_id} not found")
-        return
+    db = SessionLocal()
 
     try:
+        rec = db.query(ReportGeneration).filter(ReportGeneration.id == report_id).first()
+        if not rec:
+            logger.error(f"Report record {report_id} not found")
+            return
+
         # Load portfolio
         portfolio = db.query(Portfolio).filter(Portfolio.id == rec.portfolio_id).first()
         if not portfolio:
@@ -197,6 +198,8 @@ def generate_report(report_id: str, db: Session):
         rec.status = "failed"
         rec.error_message = str(e)
         db.commit()
+    finally:
+        db.close()
 
 
 def _render_pdf(path, portfolio_name, curve_date, scenario_results, base_zc_data):

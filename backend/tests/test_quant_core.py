@@ -426,4 +426,100 @@ def test_krd_reconciliation():
     assert pytest.approx(sum_krs, rel=1e-3) == parallel_dv01
 
 
+# Test 16: Factor-level P&L decomposition and Tenor-bucket risk contribution reconciliation
+def test_factor_pnl_decomposition():
+    settlement_date = date(2025, 1, 15)
+    issue_date = date(2025, 1, 15)
+    maturity_date = date(2030, 1, 15) # 5-year G-Sec
+    coupon_rate = 6.0
+    face_value = 1000000.0 # ₹10L
+
+    cashflows = cashflow.generate_cashflows(
+        issue_date=issue_date,
+        maturity_date=maturity_date,
+        coupon_rate=coupon_rate,
+        coupon_frequency=2,
+        face_value=100.0
+    )
+
+    # Base NSS parameters (typical curve shape)
+    base_params = {
+        "beta0": 7.0,
+        "beta1": -1.0,
+        "beta2": 2.0,
+        "beta3": -1.0,
+        "tau1": 2.0,
+        "tau2": 8.0
+    }
+
+    # 1. Single factor shock case (Level shift only)
+    decomp_level = risk.calculate_position_factor_pnl_decomposition(
+        settlement_date=settlement_date,
+        cashflows=cashflows,
+        base_params=base_params,
+        parallel_shift=0.10, # 10bps shift
+        face_value=face_value
+    )
+
+    # Sum of parts must exactly equal total (reconciliation)
+    sum_parts_level = (
+        decomp_level["level"] +
+        decomp_level["slope"] +
+        decomp_level["curvature1"] +
+        decomp_level["curvature2"] +
+        decomp_level["residual"]
+    )
+    assert pytest.approx(sum_parts_level, abs=1e-10) == decomp_level["total"]
+    # With only level shift, level contribution must dominate and others must be zero
+    assert decomp_level["level"] != 0.0
+    assert decomp_level["slope"] == 0.0
+    assert decomp_level["curvature1"] == 0.0
+    assert decomp_level["curvature2"] == 0.0
+
+    # 2. Joint factor shock case (Parallel shift + Slope shock + Curvature shocks + Twist)
+    decomp_joint = risk.calculate_position_factor_pnl_decomposition(
+        settlement_date=settlement_date,
+        cashflows=cashflows,
+        base_params=base_params,
+        parallel_shift=0.15,
+        slope_shock=-0.05,
+        curvature1_shock=0.08,
+        curvature2_shock=-0.04,
+        twist_shock=0.02,
+        twist_pivot=5.0,
+        face_value=face_value
+    )
+
+    sum_parts_joint = (
+        decomp_joint["level"] +
+        decomp_joint["slope"] +
+        decomp_joint["curvature1"] +
+        decomp_joint["curvature2"] +
+        decomp_joint["residual"]
+    )
+    assert pytest.approx(sum_parts_joint, abs=1e-10) == decomp_joint["total"]
+    assert decomp_joint["level"] != 0.0
+    assert decomp_joint["slope"] != 0.0
+    assert decomp_joint["curvature1"] != 0.0
+    assert decomp_joint["curvature2"] != 0.0
+
+    # 3. Tenor-bucket risk contribution check
+    # Get base ZeroCurve and price
+    def base_curve_fn(t):
+        return nss_yield(t, **base_params)
+    zc = bootstrap_zero_curve(base_curve_fn, max_maturity=10.0, step_size=0.5)
+
+    p0 = pricing.calculate_dirty_price(settlement_date, cashflows, zc)
+    pos_dv01 = risk.calculate_dv01(settlement_date, cashflows, zc) * (face_value / 100.0)
+
+    # Tenor bucket sensitivities
+    krds = calculate_key_rate_durations(settlement_date, cashflows, zc)
+    krs_buckets = [krd * p0 * 0.0001 * (face_value / 100.0) for krd in krds]
+
+    # Reconciliation: sum of bucket sensitivities must equal total position parallel DV01
+    sum_krs = sum(krs_buckets)
+    assert pytest.approx(sum_krs, rel=1e-3) == pos_dv01
+
+
+
 

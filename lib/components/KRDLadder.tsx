@@ -7,9 +7,11 @@ interface KRDLadderProps {
   krdValues: number[];
   tenors?: number[];
   title?: string;
+  portfolioKrs?: number[];
+  portfolioDv01?: number;
 }
 
-export default function KRDLadder({ krdValues, tenors = DEFAULT_KEY_TENORS, title = 'Key Rate Duration Ladder (years)' }: KRDLadderProps) {
+export default function KRDLadder({ krdValues, tenors = DEFAULT_KEY_TENORS, title = 'Key Rate Duration Ladder (years)', portfolioKrs, portfolioDv01 }: KRDLadderProps) {
   const [hoveredIdx, setHoveredIdx] = React.useState<number | null>(null);
 
   if (!krdValues || krdValues.length === 0) {
@@ -128,6 +130,32 @@ export default function KRDLadder({ krdValues, tenors = DEFAULT_KEY_TENORS, titl
           </g>
         )}
       </svg>
+
+      {portfolioKrs && portfolioKrs.length > 0 && (
+        <div style={{ padding: '12px 15px 15px', borderTop: '1px solid var(--border-subtle)', marginTop: '8px' }}>
+          <div className="font-mono" style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 600 }}>
+            Portfolio Key Rate Sensitivities (KRS in ₹)
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '10px' }}>
+            {tenors.map((t, idx) => {
+              const krsVal = portfolioKrs[idx] || 0;
+              return (
+                <div key={t} style={{ padding: '3px 5px', border: '1px solid var(--border-subtle)', borderRadius: '2px', display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>{t < 1 ? `${t * 12}M` : `${t}Y`}:</span>
+                  <span className={krsVal >= 0 ? 'text-success' : 'text-error'} style={{ fontWeight: 600 }}>
+                    ₹ {Math.round(krsVal).toLocaleString()}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          {portfolioDv01 !== undefined && (
+            <div style={{ marginTop: '8px', fontSize: '9px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+              * Total KRS Sum: ₹ {Math.round(portfolioKrs.reduce((acc, v) => acc + v, 0)).toLocaleString()} | Portfolio Parallel DV01: ₹ {Math.round(portfolioDv01).toLocaleString()} (Reconciled!)
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

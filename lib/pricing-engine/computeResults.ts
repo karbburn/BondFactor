@@ -2,7 +2,7 @@ import { getSettlementDate, calculateAccruedInterest } from './conventions';
 import { generateCashflows } from './cashflow';
 import { bootstrapZeroCurve, ZeroCurve } from './bootstrap';
 import { calculateDirtyPrice, calculateCleanPrice, calculateYtm } from './pricing';
-import { calculateMacaulayDuration, calculateModifiedDuration, calculateDv01, calculateConvexity } from './risk';
+import { calculateMacaulayDuration, calculateModifiedDuration, calculateDv01, calculateConvexity, calculatePositionFactorPnLDecomposition, FactorPnLDecomposition } from './risk';
 import { applyScenarioShocks, nssYield } from './scenario';
 import { calculateKeyRateDurations, DEFAULT_KEY_TENORS } from './krd';
 import { NSSParameters } from './types';
@@ -41,6 +41,7 @@ export interface ComputedPosition {
   shockedConv: number;
   shockedKrd: number[];
   pnl: number;
+  factorPnL: FactorPnLDecomposition;
 }
 
 export interface PortfolioSummary {
@@ -53,6 +54,8 @@ export interface PortfolioSummary {
   portfolioDv01: number;
   portfolioConvexity: number;
   portfolioKrd: number[];
+  portfolioKrs: number[];
+  factorPnL: FactorPnLDecomposition;
 }
 
 export interface PositionInput {
@@ -98,6 +101,8 @@ export function computePortfolioResults(
   baseZc: ZeroCurve,
   shockedZc: ZeroCurve,
   curveDate: string,
+  baseParams: NSSParameters,
+  shocks: ScenarioShocks
 ): { computedPositions: ComputedPosition[]; summary: PortfolioSummary } {
   if (portfolio.length === 0) {
     return {
@@ -143,6 +148,21 @@ export function computePortfolioResults(
 
     const pnl = shockedDirtyValue - baseDirtyValue;
 
+    const factorPnL = calculatePositionFactorPnLDecomposition(
+      sd,
+      cfs,
+      baseParams,
+      {
+        parallel_shift: shocks.parallel_shift,
+        slope_shock: shocks.slope_shock,
+        curvature1_shock: shocks.curvature1_shock,
+        curvature2_shock: shocks.curvature2_shock,
+        twist_shock: shocks.twist_shock,
+        twist_pivot: shocks.twist_pivot
+      },
+      faceValue
+    );
+
     return {
       security: s, faceValue,
       baseAccrued, baseDirtyPrice, baseCleanPrice, baseDirtyValue, baseCleanValue,
@@ -150,6 +170,7 @@ export function computePortfolioResults(
       shockedAccrued: baseAccrued, shockedDirtyPrice, shockedCleanPrice, shockedDirtyValue, shockedCleanValue,
       shockedYtm, shockedMacDur, shockedModDur, shockedDv01, shockedConv, shockedKrd,
       pnl,
+      factorPnL,
     };
   });
 
@@ -168,6 +189,14 @@ function aggregateSummary(computedPositions: ComputedPosition[]): PortfolioSumma
   let weightedModDurSum = 0;
   let weightedConvSum = 0;
   const totalKrd = new Array(DEFAULT_KEY_TENORS.length).fill(0.0);
+  const totalKrs = new Array(DEFAULT_KEY_TENORS.length).fill(0.0);
+
+  let totalLevel = 0;
+  let totalSlope = 0;
+  let totalCurv1 = 0;
+  let totalCurv2 = 0;
+  let totalResidual = 0;
+  let totalDecompPnL = 0;
 
   for (const pos of computedPositions) {
     totalBaseDirtyValue += pos.baseDirtyValue;
@@ -180,6 +209,15 @@ function aggregateSummary(computedPositions: ComputedPosition[]): PortfolioSumma
     weightedConvSum += pos.conv * pos.baseDirtyValue;
     for (let k = 0; k < DEFAULT_KEY_TENORS.length; k++) {
       totalKrd[k] += pos.krd[k] * (pos.faceValue / 100.0);
+      totalKrs[k] += pos.krd[k] * pos.baseDirtyPrice * 0.0001 * (pos.faceValue / 100.0);
+    }
+    if (pos.factorPnL) {
+      totalLevel += pos.factorPnL.level;
+      totalSlope += pos.factorPnL.slope;
+      totalCurv1 += pos.factorPnL.curvature1;
+      totalCurv2 += pos.factorPnL.curvature2;
+      totalResidual += pos.factorPnL.residual;
+      totalDecompPnL += pos.factorPnL.total;
     }
   }
 
@@ -193,6 +231,15 @@ function aggregateSummary(computedPositions: ComputedPosition[]): PortfolioSumma
     portfolioDv01: totalDv01,
     portfolioConvexity: totalBaseDirtyValue > 0 ? weightedConvSum / totalBaseDirtyValue : 0,
     portfolioKrd: totalKrd,
+    portfolioKrs: totalKrs,
+    factorPnL: {
+      level: totalLevel,
+      slope: totalSlope,
+      curvature1: totalCurv1,
+      curvature2: totalCurv2,
+      residual: totalResidual,
+      total: totalDecompPnL
+    }
   };
 }
 
@@ -201,5 +248,7 @@ function emptySummary(): PortfolioSummary {
     totalBaseDirtyValue: 0, totalBaseCleanValue: 0, totalShockedDirtyValue: 0, totalPnl: 0,
     portfolioMacDur: 0, portfolioModDur: 0, portfolioDv01: 0, portfolioConvexity: 0,
     portfolioKrd: new Array(DEFAULT_KEY_TENORS.length).fill(0.0),
+    portfolioKrs: new Array(DEFAULT_KEY_TENORS.length).fill(0.0),
+    factorPnL: { level: 0, slope: 0, curvature1: 0, curvature2: 0, residual: 0, total: 0 }
   };
 }

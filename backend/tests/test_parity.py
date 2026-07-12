@@ -9,7 +9,7 @@ from quant_core.cashflow import generate_cashflows
 from quant_core.nss import nss_yield
 from quant_core.bootstrap import bootstrap_zero_curve
 from quant_core.pricing import calculate_dirty_price, calculate_clean_price, calculate_ytm
-from quant_core.risk import calculate_macaulay_duration, calculate_modified_duration, calculate_dv01, calculate_convexity
+from quant_core.risk import calculate_macaulay_duration, calculate_modified_duration, calculate_dv01, calculate_convexity, calculate_position_factor_pnl_decomposition
 from quant_core.krd import calculate_key_rate_durations
 from quant_core.scenario import apply_scenario_shocks, get_shocked_zero_curve
 
@@ -135,6 +135,18 @@ def test_generate_parity_outputs():
                 dv01 = calculate_dv01(sd, cfs, zc_scen)
                 conv = calculate_convexity(sd, cfs, zc_scen)
                 krd = calculate_key_rate_durations(sd, cfs, zc_scen, fixtures["key_tenors"])
+                factor_pnl = calculate_position_factor_pnl_decomposition(
+                    settlement_date=sd,
+                    cashflows=cfs,
+                    base_params=baseline_nss,
+                    parallel_shift=shocks.get("parallel_shift", 0.0),
+                    slope_shock=shocks.get("slope_shock", 0.0),
+                    curvature1_shock=shocks.get("curvature1_shock", 0.0),
+                    curvature2_shock=shocks.get("curvature2_shock", 0.0),
+                    twist_shock=shocks.get("twist_shock", 0.0),
+                    twist_pivot=shocks.get("twist_pivot", 5.0),
+                    face_value=face_value
+                )
                 
                 scen_data["bonds"][bond_id] = {
                     "dirty_price": dirty_price,
@@ -144,7 +156,8 @@ def test_generate_parity_outputs():
                     "modified_duration": mod_dur,
                     "dv01": dv01,
                     "convexity": conv,
-                    "krd": krd
+                    "krd": krd,
+                    "factor_pnl": factor_pnl
                 }
             td_data["scenarios"][scen_name] = scen_data
             

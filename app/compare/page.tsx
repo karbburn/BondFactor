@@ -174,6 +174,8 @@ export default function ComparePage() {
                     }
                     const { summary } = computePortfolioResults(
                       p.positions, baseZc, shockedZc, curve?.curve_date || new Date().toISOString().slice(0, 10),
+                      baseParams,
+                      shocks
                     );
                     return (
                       <tr key={p.id}>
@@ -217,6 +219,8 @@ export default function ComparePage() {
               
               const { computedPositions, summary } = computePortfolioResults(
                 p.positions, baseZc, shockedZc, curve?.curve_date || new Date().toISOString().slice(0, 10),
+                baseParams,
+                shocks
               );
               return (
                 <PortfolioComparisonPanel

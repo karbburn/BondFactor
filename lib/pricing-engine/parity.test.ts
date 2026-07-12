@@ -6,7 +6,7 @@ import { getSettlementDate, calculateAccruedInterest } from "./conventions";
 import { generateCashflows } from "./cashflow";
 import { bootstrapZeroCurve } from "./bootstrap";
 import { calculateDirtyPrice, calculateCleanPrice, calculateYtm } from "./pricing";
-import { calculateMacaulayDuration, calculateModifiedDuration, calculateDv01, calculateConvexity } from "./risk";
+import { calculateMacaulayDuration, calculateModifiedDuration, calculateDv01, calculateConvexity, calculatePositionFactorPnLDecomposition } from "./risk";
 import { getShockedZeroCurve, nssYield } from "./scenario";
 import { calculateKeyRateDurations } from "./krd";
 
@@ -167,11 +167,26 @@ describe("TypeScript vs Python Reference Parity Tests", () => {
               const conv = calculateConvexity(sd, cashflows, zcScen);
               expect(conv).toBeCloseTo(pyBond.convexity, 3);
               
-              const krd = calculateKeyRateDurations(sd, cashflows, zcScen, fixtures.key_tenors);
+               const krd = calculateKeyRateDurations(sd, cashflows, zcScen, fixtures.key_tenors);
               expect(krd.length).toBe(pyBond.krd.length);
               for (let i = 0; i < krd.length; i++) {
                 expect(krd[i]).toBeCloseTo(pyBond.krd[i], 4);
               }
+
+              // Factor P&L Decomposition Parity
+              const factorPnL = calculatePositionFactorPnLDecomposition(
+                sd,
+                cashflows,
+                fixtures.baseline_nss,
+                scen.shocks,
+                bond.face_value
+              );
+              expect(factorPnL.level).toBeCloseTo(pyBond.factor_pnl.level, 4);
+              expect(factorPnL.slope).toBeCloseTo(pyBond.factor_pnl.slope, 4);
+              expect(factorPnL.curvature1).toBeCloseTo(pyBond.factor_pnl.curvature1, 4);
+              expect(factorPnL.curvature2).toBeCloseTo(pyBond.factor_pnl.curvature2, 4);
+              expect(factorPnL.residual).toBeCloseTo(pyBond.factor_pnl.residual, 4);
+              expect(factorPnL.total).toBeCloseTo(pyBond.factor_pnl.total, 4);
             });
           }
         });

@@ -71,4 +71,4 @@ def calculate_ytm(
         try:
             return float(brentq(objective, -20.0, 500.0, xtol=1e-12))
         except ValueError:
-            return 0.0
+            raise ValueError("YTM solver failed to converge")

@@ -96,8 +96,8 @@ def seed():
             print("Seeded curve calibration.")
 
             tenors = np.array([k[1] for k in KEY_TENORS])
-            zero_rates = nss_yield(tenors, **NSS_PARAMS) / 100.0
-            discount_factors = np.exp(-zero_rates * tenors)
+            zero_rates = nss_yield(tenors, **NSS_PARAMS)  # percentage, matching ingestion
+            discount_factors = np.exp(-zero_rates / 100.0 * tenors)
 
             for t, zr, df in zip(tenors, zero_rates, discount_factors):
                 conn.execute(

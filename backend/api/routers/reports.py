@@ -100,4 +100,7 @@ def download_report(
 
     media = "application/pdf" if rec.format == "pdf" else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     filename = f"bondfactor_report_{report_id[:8]}.{rec.format}"
+    real_path = os.path.realpath(rec.storage_path)
+    if not os.path.realpath(REPORTS_DIR) in real_path:
+        raise HTTPException(status_code=403, detail="Access denied")
     return FileResponse(rec.storage_path, media_type=media, filename=filename)

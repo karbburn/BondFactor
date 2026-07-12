@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/state/AuthContext';
@@ -15,29 +15,42 @@ export default function LoginPage() {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Force re-mount on state change so fade-in animation re-triggers
+  const viewKey = useMemo(() => {
+    if (loading) return 'loading';
+    if (user) return 'authenticated';
+    return isSignUp ? 'signup' : 'signin';
+  }, [loading, user, isSignUp]);
+
+  const handleLogoutClick = () => {
+    if (confirm('Are you sure you want to log out of your session?')) {
+      signOut();
+    }
+  };
+
   if (loading) {
     return (
-      <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-        <div className="font-mono" style={{ color: 'var(--brand-color)' }}>&gt;&gt; LOADING AUTH STATE...</div>
+      <div key={viewKey} className="container loading-container fade-in">
+        <div>{'>>'} LOADING AUTH STATE...</div>
       </div>
     );
   }
 
   if (user) {
     return (
-      <div className="container">
-        <div className="panel" style={{ borderLeft: '3px solid var(--color-success)', padding: '2rem', maxWidth: '600px', margin: '4rem auto' }}>
-          <h2 className="font-mono text-brand" style={{ textTransform: 'uppercase', marginBottom: '15px' }}>
-            &gt; Authenticated
+      <div key={viewKey} className="container fade-in">
+        <div className="panel auth-panel auth-panel-success">
+          <h2 className="font-mono text-brand auth-heading">
+            {'>'} Authenticated
           </h2>
-          <div className="font-mono" style={{ fontSize: '13px', lineHeight: '1.8', color: 'var(--text-secondary)' }}>
-            <div>USER: <span style={{ color: 'var(--text-primary)' }}>{user.email}</span></div>
+          <div className="font-mono auth-info">
+            <div>USER: <span className="text-primary">{user.email}</span></div>
             <div>STATUS: <span className="text-success">ACTIVE SESSION</span></div>
-            <div>ID: <span style={{ fontSize: '11px' }}>{user.id}</span></div>
+            <div>ID: <span className="auth-id">{user.id}</span></div>
           </div>
-          <div style={{ marginTop: '25px', display: 'flex', gap: '10px' }}>
-            <Link href="/" className="btn font-mono">&lt; Return to Workstation</Link>
-            <button className="btn btn-danger font-mono" onClick={() => { signOut(); }}>LOGOUT</button>
+          <div className="auth-actions">
+            <Link href="/" className="btn font-mono">{'<'} Return to Workstation</Link>
+            <button className="btn btn-danger font-mono" onClick={handleLogoutClick}>LOGOUT</button>
           </div>
         </div>
       </div>
@@ -65,21 +78,20 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="container">
-      <div className="panel" style={{ borderLeft: '3px solid var(--brand-color)', padding: '2rem', maxWidth: '500px', margin: '4rem auto' }}>
-        <h2 className="font-mono text-brand" style={{ textTransform: 'uppercase', marginBottom: '20px' }}>
-          &gt; {isSignUp ? 'Create Account' : 'Sign In'}
+    <div key={viewKey} className="container fade-in">
+      <div className="panel auth-panel auth-panel-brand">
+        <h2 className="font-mono text-brand auth-heading">
+          {'>'} {isSignUp ? 'Create Account' : 'Sign In'}
         </h2>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '15px' }}>
-            <label className="font-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+          <div className="form-group">
+            <label className="font-mono form-label">
               Email
             </label>
             <input
               type="email"
-              className="form-input"
-              style={{ width: '100%' }}
+              className="form-input form-input-full"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -87,68 +99,69 @@ export default function LoginPage() {
             />
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label className="font-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+          <div className="form-group">
+            <label className="font-mono form-label">
               Password
             </label>
             <input
               type="password"
-              className="form-input"
-              style={{ width: '100%' }}
+              className="form-input form-input-full"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
               autoComplete={isSignUp ? 'new-password' : 'current-password'}
             />
+            {isSignUp && (
+              <span className="font-mono password-hint" style={{ color: password.length >= 6 ? 'var(--color-success)' : 'var(--text-secondary)' }}>
+                {password.length >= 6 ? '✓ Password meets 6-character minimum' : '⚠ Minimum 6 characters required'}
+              </span>
+            )}
           </div>
 
           {error && (
-            <div className="font-mono text-error" style={{ fontSize: '12px', marginBottom: '15px', padding: '8px', border: '1px solid var(--color-error)', borderRadius: '2px', backgroundColor: 'rgba(255,59,48,0.1)' }}>
+            <div className="alert-error">
               {error}
             </div>
           )}
 
           {message && (
-            <div className="font-mono text-success" style={{ fontSize: '12px', marginBottom: '15px', padding: '8px', border: '1px solid var(--color-success)', borderRadius: '2px', backgroundColor: 'rgba(52,199,89,0.1)' }}>
+            <div className="alert-success">
               {message}
             </div>
           )}
 
           <button
             type="submit"
-            className="btn font-mono"
-            style={{ width: '100%', marginBottom: '15px' }}
+            className="btn font-mono form-submit"
             disabled={submitting}
           >
-            {submitting ? '&gt;&gt; PROCESSING...' : isSignUp ? '&gt; Create Account' : '&gt; Sign In'}
+            {submitting ? '>> PROCESSING...' : isSignUp ? '> Create Account' : '> Sign In'}
           </button>
         </form>
 
-        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '15px', textAlign: 'center' }}>
+        <div className="auth-divider">
           <button
-            className="font-mono"
-            style={{ background: 'none', border: 'none', color: 'var(--brand-color)', cursor: 'pointer', fontSize: '12px' }}
+            className="font-mono auth-toggle"
             onClick={() => { setIsSignUp(!isSignUp); setError(''); setMessage(''); }}
           >
             {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Create one"}
           </button>
         </div>
 
-        <div style={{ marginTop: '15px', textAlign: 'center' }}>
-          <div className="font-mono" style={{ fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '10px' }}>OR</div>
+        <div className="auth-social">
+          <div className="font-mono auth-or">OR</div>
           <button
-            className="btn font-mono"
-            style={{ width: '100%', backgroundColor: '#4285f4', color: 'white', border: 'none', fontSize: '12px' }}
+            className="btn google-btn font-mono"
             onClick={() => signInWithGoogle()}
           >
             Sign in with Google
           </button>
         </div>
 
-        <div style={{ marginTop: '20px', textAlign: 'center' }}>
-          <Link href="/" className="font-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-            &lt; Return to Workstation
+        <div className="auth-back">
+          <Link href="/" className="font-mono auth-back-link">
+            {'<'} Return to Workstation
           </Link>
         </div>
       </div>

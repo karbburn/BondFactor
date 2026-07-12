@@ -32,6 +32,7 @@ export default function ScenarioComposer() {
   const [savedScenarios, setSavedScenarios] = useState<SavedScenario[]>([]);
   const [scenarioName, setScenarioName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loadingScenarios, setLoadingScenarios] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
 
   const apiFetch = useCallback(async (path: string, options: RequestInit = {}) => {
@@ -50,10 +51,15 @@ export default function ScenarioComposer() {
   }, []);
 
   const fetchScenarios = useCallback(async () => {
+    setLoadingScenarios(true);
     try {
       const data = await apiFetch('/api/v1/scenarios/saved');
       setSavedScenarios(data);
-    } catch { /* silent */ }
+    } catch (e: unknown) {
+      setSaveMsg(e instanceof Error ? e.message : 'Failed to load saved scenarios.');
+    } finally {
+      setLoadingScenarios(false);
+    }
   }, [apiFetch]);
 
   useEffect(() => { if (user) fetchScenarios(); }, [user, fetchScenarios]);
@@ -79,7 +85,7 @@ export default function ScenarioComposer() {
       setScenarioName('');
       await fetchScenarios();
     } catch (e: unknown) {
-      setSaveMsg(e instanceof Error ? e.message : 'Error.');
+      setSaveMsg(e instanceof Error ? e.message : 'Error saving scenario.');
     }
     setSaving(false);
   };
@@ -95,11 +101,35 @@ export default function ScenarioComposer() {
     });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete scenario "${name}"?`)) return;
     try {
       await apiFetch(`/api/v1/scenarios/saved/${id}`, { method: 'DELETE' });
+      setSaveMsg('Scenario deleted.');
       await fetchScenarios();
-    } catch { /* silent */ }
+    } catch (e: unknown) {
+      setSaveMsg(e instanceof Error ? e.message : 'Error deleting scenario.');
+    }
+  };
+
+  const handleResetClick = () => {
+    if (confirm('Are you sure you want to reset all scenario shift parameters to zero?')) {
+      resetScenarios();
+    }
+  };
+
+  // Helper for slider fill visualization
+  const getSliderStyle = (val: number, min: number, max: number) => {
+    const pct = ((val - min) / (max - min)) * 100;
+    if (val >= 0) {
+      return {
+        background: `linear-gradient(to right, var(--bg-tertiary) 0%, var(--bg-tertiary) 50%, var(--brand-color) 50%, var(--brand-color) ${pct}%, var(--bg-tertiary) ${pct}%, var(--bg-tertiary) 100%)`
+      };
+    } else {
+      return {
+        background: `linear-gradient(to right, var(--bg-tertiary) 0%, var(--bg-tertiary) ${pct}%, var(--brand-color) ${pct}%, var(--brand-color) 50%, var(--bg-tertiary) 50%, var(--bg-tertiary) 100%)`
+      };
+    }
   };
 
   return (
@@ -107,7 +137,7 @@ export default function ScenarioComposer() {
       <div className="panel-header">
         <span className="panel-title">NSS Curve Scenario Composer</span>
         <div style={{ display: 'flex', gap: '5px' }}>
-          <button className="btn btn-secondary font-mono" style={{ fontSize: '10px', padding: '2px 8px' }} onClick={resetScenarios}>
+          <button className="btn btn-secondary font-mono" style={{ fontSize: '10px', padding: '2px 8px' }} onClick={handleResetClick}>
             Reset
           </button>
         </div>
@@ -120,8 +150,18 @@ export default function ScenarioComposer() {
             <span>Level Shock (Parallel shift, &beta;₀)</span>
             <span className="font-mono text-brand">{parallelShift >= 0 ? '+' : ''}{parallelShift.toFixed(2)}% ({Math.round(parallelShift * 100)} bps)</span>
           </div>
-          <input type="range" min="-3.00" max="3.00" step="0.05" value={parallelShift}
-            onChange={(e) => setParallelShift(parseFloat(e.target.value))} className="custom-slider" />
+          <input
+            type="range"
+            min="-3.00"
+            max="3.00"
+            step="0.05"
+            value={parallelShift}
+            onChange={(e) => setParallelShift(parseFloat(e.target.value))}
+            className="custom-slider"
+            aria-label="Level Shock (Parallel Shift)"
+            title="Level Shock (Parallel shift, beta 0) - affects the overall height of the curve across all tenors."
+            style={getSliderStyle(parallelShift, -3.00, 3.00)}
+          />
         </div>
 
         {/* Slope Shock */}
@@ -130,8 +170,18 @@ export default function ScenarioComposer() {
             <span>Slope Shock (Steepener/Flattener, &beta;₁)</span>
             <span className="font-mono text-brand">{slopeShock >= 0 ? '+' : ''}{slopeShock.toFixed(2)}%</span>
           </div>
-          <input type="range" min="-3.00" max="3.00" step="0.05" value={slopeShock}
-            onChange={(e) => setSlopeShock(parseFloat(e.target.value))} className="custom-slider" />
+          <input
+            type="range"
+            min="-3.00"
+            max="3.00"
+            step="0.05"
+            value={slopeShock}
+            onChange={(e) => setSlopeShock(parseFloat(e.target.value))}
+            className="custom-slider"
+            aria-label="Slope Shock (Steepener/Flattener)"
+            title="Slope Shock (beta 1) - steepens or flattens the yield curve by shifting short rates relative to long rates."
+            style={getSliderStyle(slopeShock, -3.00, 3.00)}
+          />
         </div>
 
         {/* Curvature 1 Shock */}
@@ -140,8 +190,18 @@ export default function ScenarioComposer() {
             <span>Curvature 1 Shock (Medium-term belly, &beta;₂)</span>
             <span className="font-mono text-brand">{curvature1Shock >= 0 ? '+' : ''}{curvature1Shock.toFixed(2)}%</span>
           </div>
-          <input type="range" min="-4.00" max="4.00" step="0.1" value={curvature1Shock}
-            onChange={(e) => setCurvature1Shock(parseFloat(e.target.value))} className="custom-slider" />
+          <input
+            type="range"
+            min="-4.00"
+            max="4.00"
+            step="0.1"
+            value={curvature1Shock}
+            onChange={(e) => setCurvature1Shock(parseFloat(e.target.value))}
+            className="custom-slider"
+            aria-label="Curvature 1 Shock (Medium-term belly)"
+            title="Curvature 1 Shock (beta 2) - affects medium-term rates, creating or modifying a belly shape in the 2Y-7Y sector."
+            style={getSliderStyle(curvature1Shock, -4.00, 4.00)}
+          />
         </div>
 
         {/* Curvature 2 Shock */}
@@ -150,8 +210,18 @@ export default function ScenarioComposer() {
             <span>Curvature 2 Shock (Long-term belly, &beta;₃)</span>
             <span className="font-mono text-brand">{curvature2Shock >= 0 ? '+' : ''}{curvature2Shock.toFixed(2)}%</span>
           </div>
-          <input type="range" min="-4.00" max="4.00" step="0.1" value={curvature2Shock}
-            onChange={(e) => setCurvature2Shock(parseFloat(e.target.value))} className="custom-slider" />
+          <input
+            type="range"
+            min="-4.00"
+            max="4.00"
+            step="0.1"
+            value={curvature2Shock}
+            onChange={(e) => setCurvature2Shock(parseFloat(e.target.value))}
+            className="custom-slider"
+            aria-label="Curvature 2 Shock (Long-term belly)"
+            title="Curvature 2 Shock (beta 3) - affects long-term rates, creating a secondary curvature/belly in the 10Y-30Y sector."
+            style={getSliderStyle(curvature2Shock, -4.00, 4.00)}
+          />
         </div>
 
         {/* Twist Shock */}
@@ -160,14 +230,32 @@ export default function ScenarioComposer() {
             <span>Twist Shock (Slope pivot twist)</span>
             <span className="font-mono text-brand">{twistShock >= 0 ? '+' : ''}{twistShock.toFixed(2)}%</span>
           </div>
-          <input type="range" min="-2.00" max="2.00" step="0.05" value={twistShock}
-            onChange={(e) => setTwistShock(parseFloat(e.target.value))} className="custom-slider" />
+          <input
+            type="range"
+            min="-2.00"
+            max="2.00"
+            step="0.05"
+            value={twistShock}
+            onChange={(e) => setTwistShock(parseFloat(e.target.value))}
+            className="custom-slider"
+            aria-label="Twist Shock (Slope pivot twist)"
+            title="Twist Shock - twists the curve around a specified pivot tenor (steepens or flattens around the pivot)."
+            style={getSliderStyle(twistShock, -2.00, 2.00)}
+          />
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', alignItems: 'center' }}>
             <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Twist Pivot Maturity:</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <input type="number" min="0.5" max="30" step="0.5" value={twistPivot}
+              <input
+                type="number"
+                min="0.5"
+                max="30"
+                step="0.5"
+                value={twistPivot}
                 onChange={(e) => setTwistPivot(Math.max(0.5, parseFloat(e.target.value) || 5.0))}
-                className="form-input font-mono" style={{ width: '60px', padding: '2px 5px', fontSize: '11px' }} />
+                className="form-input font-mono"
+                style={{ width: '60px', padding: '2px 5px', fontSize: '11px' }}
+                aria-label="Twist Pivot Maturity"
+              />
               <span style={{ fontSize: '11px' }}>Years</span>
             </div>
           </div>
@@ -187,6 +275,7 @@ export default function ScenarioComposer() {
                 value={scenarioName}
                 onChange={e => setScenarioName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSave()}
+                aria-label="New Scenario Name"
               />
               <button className="btn font-mono" style={{ fontSize: '10px', minWidth: '60px' }}
                 disabled={saving || !scenarioName.trim()} onClick={handleSave}>
@@ -195,8 +284,16 @@ export default function ScenarioComposer() {
             </div>
             {saveMsg && <div className="font-mono" style={{ fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '5px' }}>{saveMsg}</div>}
 
-            {savedScenarios.length > 0 && (
-              <div style={{ maxHeight: '100px', overflowY: 'auto' }}>
+            {loadingScenarios ? (
+              <div className="font-mono" style={{ fontSize: '10px', color: 'var(--text-secondary)', padding: '5px 0' }}>
+                Loading saved scenarios...
+              </div>
+            ) : savedScenarios.length === 0 ? (
+              <div className="font-mono" style={{ fontSize: '10px', color: 'var(--text-secondary)', padding: '5px 0' }}>
+                No saved scenarios.
+              </div>
+            ) : (
+              <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                 {savedScenarios.map(s => (
                   <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     padding: '3px 0', borderBottom: '1px solid var(--border-color)' }}>
@@ -207,7 +304,7 @@ export default function ScenarioComposer() {
                     </button>
                     <button className="font-mono" style={{ fontSize: '10px', color: 'var(--color-error)',
                       background: 'none', border: 'none', cursor: 'pointer' }}
-                      onClick={() => handleDelete(s.id)}>DEL</button>
+                      onClick={() => handleDelete(s.id, s.scenario_name)}>DEL</button>
                   </div>
                 ))}
               </div>

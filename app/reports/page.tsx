@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { usePortfolio } from '../../lib/state/PortfolioContext';
 import { useAuth } from '../../lib/state/AuthContext';
 import { useScenario } from '../../lib/state/ScenarioContext';
@@ -23,11 +23,32 @@ export default function ReportsPage() {
   const [report, setReport] = useState<ReportStatus | null>(null);
   const [error, setError] = useState('');
 
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => { if (user) fetchSavedPortfolios(); }, [user, fetchSavedPortfolios]);
 
   useEffect(() => {
     if (activePortfolioId) setSelectedPortfolio(activePortfolioId);
   }, [activePortfolioId]);
+
+  // Clean up polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const handleCancel = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    setGenerating(false);
+    setReport(null);
+    setError('Report generation cancelled by user.');
+  };
 
   const handleGenerate = async () => {
     if (!selectedPortfolio) return;
@@ -66,8 +87,19 @@ export default function ReportsPage() {
       const data: ReportStatus = await res.json();
       setReport(data);
 
+      let ticks = 0;
+      const maxTicks = 20; // 20 ticks of 1500ms = 30 seconds
+      
       // Poll for completion
       const pollInterval = setInterval(async () => {
+        ticks++;
+        if (ticks >= maxTicks) {
+          clearInterval(pollInterval);
+          setGenerating(false);
+          setError('Report generation taking longer than expected (30s timeout). Please try again.');
+          return;
+        }
+
         try {
           const pollRes = await fetch(`/api/v1/reports/${data.report_id}`, {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -82,9 +114,11 @@ export default function ReportsPage() {
         } catch {
           clearInterval(pollInterval);
           setGenerating(false);
-          setError('Lost connection during generation.');
+          setError('Lost connection to reports server.');
         }
       }, 1500);
+
+      pollIntervalRef.current = pollInterval;
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to start generation');
       setGenerating(false);
@@ -93,10 +127,10 @@ export default function ReportsPage() {
 
   if (!user) {
     return (
-      <div className="container">
+      <div className="container fade-in">
         <div className="panel" style={{ padding: '2rem', textAlign: 'center' }}>
-          <div className="font-mono" style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
-            Log in to generate reports.
+          <div className="font-mono text-secondary" style={{ fontSize: '12px' }}>
+            Log in to generate workstation risk reports.
           </div>
         </div>
       </div>
@@ -104,19 +138,19 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="container">
+    <div className="container fade-in">
       <div className="panel" style={{ padding: '12px 15px', marginBottom: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <span className="font-mono text-brand" style={{ fontWeight: 600, fontSize: '13px' }}>
             RISK REPORT GENERATOR
           </span>
           <span className="font-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-            Server-side repricing — numbers match quant_core independently
+            Server-side repricing — matches quant_core results
           </span>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
         {/* Config panel */}
         <div className="panel">
           <div className="panel-header">
@@ -130,6 +164,7 @@ export default function ReportsPage() {
                 value={selectedPortfolio}
                 onChange={e => setSelectedPortfolio(e.target.value)}
                 className="form-input"
+                aria-label="Select Portfolio"
               >
                 <option value="">Select a portfolio...</option>
                 {savedPortfolios.map(sp => (
@@ -147,6 +182,7 @@ export default function ReportsPage() {
                     className={`btn font-mono ${format === f ? '' : 'btn-secondary'}`}
                     style={{ flex: 1, fontSize: '11px' }}
                     onClick={() => setFormat(f)}
+                    aria-pressed={format === f}
                   >
                     {f.toUpperCase()}
                   </button>
@@ -155,22 +191,32 @@ export default function ReportsPage() {
             </div>
 
             <div style={{ fontSize: '11px', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
-              <div className="font-mono" style={{ marginBottom: '5px' }}>SCENARIO (from Scenario Composer):</div>
-              <div>Parallel: {parallelShift >= 0 ? '+' : ''}{parallelShift.toFixed(2)}%</div>
+              <div className="font-mono" style={{ marginBottom: '5px', fontWeight: 600 }}>ACTIVE NSS CURVE SHOCKS:</div>
+              <div>Level: {parallelShift >= 0 ? '+' : ''}{parallelShift.toFixed(2)}%</div>
               <div>Slope: {slopeShock >= 0 ? '+' : ''}{slopeShock.toFixed(2)}%</div>
               <div>Curvature 1: {curvature1Shock >= 0 ? '+' : ''}{curvature1Shock.toFixed(2)}%</div>
               <div>Curvature 2: {curvature2Shock >= 0 ? '+' : ''}{curvature2Shock.toFixed(2)}%</div>
               <div>Twist: {twistShock >= 0 ? '+' : ''}{twistShock.toFixed(2)}%</div>
             </div>
 
-            <button
-              className="btn"
-              onClick={handleGenerate}
-              disabled={!selectedPortfolio || generating}
-              style={{ width: '100%', marginTop: '10px' }}
-            >
-              {generating ? 'GENERATING...' : `GENERATE ${format.toUpperCase()}`}
-            </button>
+            {generating ? (
+              <button
+                className="btn btn-danger"
+                onClick={handleCancel}
+                style={{ width: '100%', marginTop: '10px' }}
+              >
+                CANCEL GENERATION
+              </button>
+            ) : (
+              <button
+                className="btn"
+                onClick={handleGenerate}
+                disabled={!selectedPortfolio}
+                style={{ width: '100%', marginTop: '10px' }}
+              >
+                GENERATE {format.toUpperCase()}
+              </button>
+            )}
           </div>
         </div>
 
@@ -181,12 +227,14 @@ export default function ReportsPage() {
           </div>
 
           {error && (
-            <div className="font-mono text-error" style={{ fontSize: '11px', marginBottom: '10px' }}>{error}</div>
+            <div className="alert-error" style={{ marginBottom: '15px' }}>
+              {error}
+            </div>
           )}
 
           {!report && !error && (
-            <div className="font-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '20px', textAlign: 'center' }}>
-              Configure and click Generate to create a report.
+            <div className="font-mono text-secondary" style={{ fontSize: '11px', padding: '20px', textAlign: 'center' }}>
+              Configure and click Generate to run report engine.
             </div>
           )}
 
@@ -204,8 +252,13 @@ export default function ReportsPage() {
               </div>
 
               {report.status === 'processing' && (
-                <div className="font-mono" style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-                  Server is re-deriving portfolio metrics and rendering document...
+                <div>
+                  <div className="font-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    Re-calculating fixed-income portfolio risk metrics and compiling document...
+                  </div>
+                  <div className="progress-bar-container">
+                    <div className="progress-bar-fill" />
+                  </div>
                 </div>
               )}
 
@@ -213,7 +266,7 @@ export default function ReportsPage() {
                 <a
                   href={report.download_url}
                   className="btn font-mono"
-                  style={{ fontSize: '11px', textAlign: 'center', textDecoration: 'none' }}
+                  style={{ fontSize: '11px', textAlign: 'center', textDecoration: 'none', display: 'block', marginTop: '10px' }}
                   target="_blank"
                   rel="noopener noreferrer"
                 >

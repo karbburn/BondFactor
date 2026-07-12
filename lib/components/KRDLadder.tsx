@@ -10,6 +10,16 @@ interface KRDLadderProps {
 }
 
 export default function KRDLadder({ krdValues, tenors = DEFAULT_KEY_TENORS, title = 'Key Rate Duration Ladder (years)' }: KRDLadderProps) {
+  const [hoveredIdx, setHoveredIdx] = React.useState<number | null>(null);
+
+  if (!krdValues || krdValues.length === 0) {
+    return (
+      <div className="empty-state">
+        No curve data available
+      </div>
+    );
+  }
+
   const width = 400;
   const rowHeight = 22;
   const headerHeight = 25;
@@ -27,7 +37,14 @@ export default function KRDLadder({ krdValues, tenors = DEFAULT_KEY_TENORS, titl
       <div className="font-mono text-brand" style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', marginBottom: '10px' }}>
         {title}
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" style={{ fontFamily: 'var(--font-mono)', fontSize: '10px' }}>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        width="100%"
+        height="auto"
+        style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', overflow: 'visible' }}
+        role="img"
+        aria-label={title}
+      >
         <line x1={zeroX} y1={headerHeight} x2={zeroX} y2={height - 15} stroke="#8E8E93" strokeWidth="1" strokeDasharray="2 2" />
         <text x={zeroX} y={headerHeight - 8} textAnchor="middle" fill="var(--text-secondary)" style={{ fontSize: '8px' }}>0.0</text>
         
@@ -38,7 +55,13 @@ export default function KRDLadder({ krdValues, tenors = DEFAULT_KEY_TENORS, titl
           
           const barX = val >= 0 ? zeroX : zeroX + barWidth;
           const displayWidth = Math.abs(barWidth);
-          const barColor = val >= 0 ? 'var(--brand-color)' : 'var(--color-error)';
+          
+          const isHovered = hoveredIdx === idx;
+          // Highlight bar on hover by changing color/opacity
+          const barColor = val >= 0 
+            ? (isHovered ? '#ffca28' : 'var(--brand-color)') 
+            : (isHovered ? '#ff5252' : 'var(--color-error)');
+          const barOpacity = isHovered ? '1.0' : '0.8';
           
           return (
             <g key={t}>
@@ -54,8 +77,11 @@ export default function KRDLadder({ krdValues, tenors = DEFAULT_KEY_TENORS, titl
                 width={Math.max(1, displayWidth)}
                 height={rowHeight - 8}
                 fill={barColor}
-                opacity="0.8"
+                opacity={barOpacity}
                 rx="1"
+                onMouseEnter={() => setHoveredIdx(idx)}
+                onMouseLeave={() => setHoveredIdx(null)}
+                style={{ cursor: 'pointer', transition: 'fill 0.15s ease, opacity 0.15s ease' }}
               />
               
               <text
@@ -70,6 +96,37 @@ export default function KRDLadder({ krdValues, tenors = DEFAULT_KEY_TENORS, titl
             </g>
           );
         })}
+
+        {/* Hover Tooltip */}
+        {hoveredIdx !== null && (
+          <g 
+            transform={`translate(${
+              zeroX + ((krdValues[hoveredIdx] || 0) / maxAbsKrd) * (plotWidth / 2)
+            }, ${headerHeight + hoveredIdx * rowHeight - 6})`} 
+            pointerEvents="none"
+          >
+            <rect
+              width="80"
+              height="18"
+              x="-40"
+              y="-18"
+              fill="var(--bg-tertiary)"
+              stroke="var(--border-color)"
+              strokeWidth="1"
+              rx="2"
+              opacity="0.95"
+            />
+            <text
+              x="0"
+              y="-6"
+              textAnchor="middle"
+              fill="var(--text-primary)"
+              style={{ fontSize: '9px', fontWeight: 600 }}
+            >
+              {(krdValues[hoveredIdx] || 0).toFixed(4)}
+            </text>
+          </g>
+        )}
       </svg>
     </div>
   );

@@ -2,13 +2,26 @@ import type { Metadata } from "next";
 import "./globals.css";
 import React from "react";
 import Link from "next/link";
+import { JetBrains_Mono, Outfit } from "next/font/google";
 
 import { CurveProvider } from "../lib/state/CurveContext";
 import { PortfolioProvider } from "../lib/state/PortfolioContext";
 import { ScenarioProvider } from "../lib/state/ScenarioContext";
 import { ResultsProvider } from "../lib/state/ResultsContext";
 import { AuthProvider } from "../lib/state/AuthContext";
-import AuthNav from "../lib/components/AuthNav";
+import Navbar from "../lib/components/Navbar";
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+});
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "BondFactor // Fixed Income Workstation",
@@ -21,54 +34,30 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${outfit.variable} ${jetbrainsMono.variable}`}>
       <body>
         <AuthProvider>
           <CurveProvider>
             <PortfolioProvider>
               <ScenarioProvider>
                 <ResultsProvider>
-                  <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-                    <header className="navbar">
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <span className="font-mono text-brand" style={{ fontWeight: 700, fontSize: "16px", letterSpacing: "0.1em" }}>
-                          BONDFACTOR // TERMINAL
-                        </span>
-                        <span style={{ fontSize: "10px", backgroundColor: "#262636", padding: "2px 6px", borderRadius: "2px", color: "#8E8E93" }}>
-                          v1.0.0
-                        </span>
-                      </div>
-                      <nav className="nav-links">
-                        <Link href="/" className="nav-link">
-                          Dashboard
-                        </Link>
-                        <Link href="/portfolio" className="nav-link">
-                          Portfolio Builder
-                        </Link>
-                        <Link href="/compare" className="nav-link">
-                          Compare
-                        </Link>
-                        <Link href="/curve" className="nav-link">
-                          Curve Explorer
-                        </Link>
-                        <Link href="/validate" className="nav-link">
-                          Pricing Validation
-                        </Link>
-                        <Link href="/history" className="nav-link text-secondary">
-                          [Historical Replay]
-                        </Link>
-                        <Link href="/reports" className="nav-link text-secondary">
-                          [Reports]
-                        </Link>
-                      </nav>
-                      <AuthNav />
-                    </header>
-                    <main style={{ flex: 1 }}>
+                  <a href="#main-content" className="skip-link">Skip to content</a>
+                  <div className="layout-wrapper">
+                    <Navbar />
+                    <main id="main-content" className="layout-main">
                       {children}
                     </main>
-                    <footer style={{ backgroundColor: "var(--bg-secondary)", borderTop: "1px solid var(--border-color)", padding: "10px 1.5rem", textAlign: "center", fontSize: "11px", color: "var(--text-secondary)" }}>
-                      <div className="font-mono">
+                    <footer className="layout-footer">
+                      <div className="font-mono footer-content">
                         BONDFACTOR RISK ENGINE // PORTFOLIO ANALYTICS PLATFORM
+                        <span className="footer-details">
+                          v1.0.0 (Build: 2026-07-12) | Powered by FastAPI + Supabase
+                        </span>
+                        <div className="footer-legal">
+                          <Link href="/privacy" className="footer-legal-link">Privacy Policy</Link>
+                          <span className="footer-legal-sep">|</span>
+                          <Link href="/terms" className="footer-legal-link">Terms of Use</Link>
+                        </div>
                       </div>
                     </footer>
                   </div>
@@ -81,3 +70,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+

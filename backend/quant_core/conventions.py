@@ -17,9 +17,9 @@ def get_settlement_date(trade_date: date) -> date:
     weekday = trade_date.weekday()  # 0 = Monday, 6 = Sunday
     if weekday == 4:    # Friday -> Monday
         return trade_date + timedelta(days=3)
-    elif weekday == 5:  # Saturday -> Monday
+    elif weekday == 5 or weekday == 6:  # Saturday/Sunday -> Tuesday
         return trade_date + timedelta(days=2)
-    else:               # Monday-Thursday, Sunday -> Next Day
+    else:               # Monday-Thursday -> Next Day
         return trade_date + timedelta(days=1)
 
 def calculate_accrued_interest(

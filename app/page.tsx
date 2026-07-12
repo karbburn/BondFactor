@@ -3,6 +3,7 @@
 import React from 'react';
 import { useCurve } from '../lib/state/CurveContext';
 import { useResults } from '../lib/state/ResultsContext';
+import { formatCurrency } from '../lib/utils/format';
 import CurveChart from '../lib/components/CurveChart';
 import KRDLadder from '../lib/components/KRDLadder';
 
@@ -56,14 +57,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  const formatCurrency = (val: number) => {
-    // Format as ₹ Cr (Crores) or Lakhs
-    if (val >= 10000000) {
-      return `₹ ${(val / 10000000).toFixed(4)} Cr`;
-    }
-    return `₹ ${(val / 100000).toFixed(2)} L`;
-  };
 
   const diagnostics = curve?.diagnostics;
   const isFallback = curve?.model_type === 'cubic_spline' || diagnostics?.validation_status === 'failed_fallback_used';

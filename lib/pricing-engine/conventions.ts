@@ -10,9 +10,9 @@ export function getSettlementDate(tradeDate: Date): Date {
   
   if (day === 5) { // Friday -> Monday (+3 days)
     date.setDate(date.getDate() + 3);
-  } else if (day === 6) { // Saturday -> Monday (+2 days)
+  } else if (day === 6 || day === 0) { // Saturday/Sunday -> Tuesday (+2 days)
     date.setDate(date.getDate() + 2);
-  } else { // Monday-Thursday, Sunday -> Next Day (+1 day)
+  } else { // Monday-Thursday -> Next Day (+1 day)
     date.setDate(date.getDate() + 1);
   }
   return date;

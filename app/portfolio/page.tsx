@@ -5,6 +5,7 @@ import { useCurve } from '../../lib/state/CurveContext';
 import { usePortfolio } from '../../lib/state/PortfolioContext';
 import { useResults } from '../../lib/state/ResultsContext';
 import { useAuth } from '../../lib/state/AuthContext';
+import { formatCurrency } from '../../lib/utils/format';
 
 export default function PortfolioBuilder() {
   const { securities, loading, error } = useCurve();
@@ -80,13 +81,6 @@ export default function PortfolioBuilder() {
       </div>
     );
   }
-
-  const formatCurrency = (val: number) => {
-    if (val >= 10000000) {
-      return `₹ ${(val / 10000000).toFixed(4)} Cr`;
-    }
-    return `₹ ${(val / 100000).toFixed(2)} L`;
-  };
 
   return (
     <div className="container fade-in">

@@ -10,6 +10,7 @@ interface ReportStatus {
   report_id: string;
   status: string;
   download_url: string | null;
+  error_message?: string | null;
 }
 
 export default function ReportsPage() {
@@ -105,12 +106,18 @@ export default function ReportsPage() {
           const pollRes = await fetch(`${base}/api/v1/reports/${data.report_id}`, {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
           });
+          if (!pollRes.ok) {
+            clearInterval(pollInterval);
+            setGenerating(false);
+            setError(`Polling failed: HTTP ${pollRes.status}`);
+            return;
+          }
           const pollData: ReportStatus = await pollRes.json();
           if (pollData.status === 'completed' || pollData.status === 'failed') {
             clearInterval(pollInterval);
             setReport(pollData);
             setGenerating(false);
-            if (pollData.status === 'failed') setError('Report generation failed.');
+            if (pollData.status === 'failed') setError(pollData.error_message || 'Report generation failed.');
           }
         } catch {
           clearInterval(pollInterval);

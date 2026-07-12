@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useScenario } from '../state/ScenarioContext';
 import { useAuth } from '../state/AuthContext';
-import { getSupabase } from '../supabase/client';
+import { apiFetch } from '../supabase/api';
 
 interface SavedScenario {
   id: string;
@@ -35,22 +35,6 @@ export default function ScenarioComposer() {
   const [loadingScenarios, setLoadingScenarios] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
 
-  const apiFetch = useCallback(async (path: string, options: RequestInit = {}) => {
-    const supabase = getSupabase();
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    const base = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-    const headers: Record<string, string> = { 'Content-Type': 'application/json', ...((options.headers as Record<string, string>) || {}) };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(`${base}${path}`, { ...options, headers });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body?.error?.message || `API error ${res.status}`);
-    }
-    if (res.status === 204) return null;
-    return res.json();
-  }, []);
-
   const fetchScenarios = useCallback(async () => {
     setLoadingScenarios(true);
     try {
@@ -61,7 +45,7 @@ export default function ScenarioComposer() {
     } finally {
       setLoadingScenarios(false);
     }
-  }, [apiFetch]);
+  }, []);
 
   useEffect(() => { if (user) fetchScenarios(); }, [user, fetchScenarios]);
 

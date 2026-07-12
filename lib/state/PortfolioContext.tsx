@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { SecurityItem, useCurve } from './CurveContext';
-import { getSupabase } from '../supabase/client';
+import { apiFetch } from '../supabase/api';
 
 export interface PositionItem {
   security: SecurityItem;
@@ -38,22 +38,6 @@ interface PortfolioContextType {
 }
 
 const PortfolioContext = createContext<PortfolioContextType | null>(null);
-
-async function apiFetch(path: string, options: RequestInit = {}) {
-  const supabase = getSupabase();
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-  const headers: Record<string, string> = { "Content-Type": "application/json", ...((options.headers as Record<string, string>) || {}) };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`${base}${path}`, { ...options, headers });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body?.error?.message || `API error ${res.status}`);
-  }
-  if (res.status === 204) return null;
-  return res.json();
-}
 
 export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [portfolio, setPortfolioState] = useState<PositionItem[]>([]);

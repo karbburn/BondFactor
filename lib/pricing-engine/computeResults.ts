@@ -2,7 +2,7 @@ import { getSettlementDate, calculateAccruedInterest } from './conventions';
 import { generateCashflows } from './cashflow';
 import { bootstrapZeroCurve, ZeroCurve } from './bootstrap';
 import { calculateDirtyPrice, calculateCleanPrice, calculateYtm } from './pricing';
-import { calculateMacaulayDuration, calculateModifiedDuration, calculateDv01, calculateConvexity, calculatePositionFactorPnLDecomposition, FactorPnLDecomposition, calculatePositionFactorPnLDecompositionOptimized, PreBootstrappedFactorCurves } from './risk';
+import { calculateMacaulayDuration, calculateModifiedDuration, calculateDv01, calculateConvexity, FactorPnLDecomposition, calculatePositionFactorPnLDecompositionOptimized, PreBootstrappedFactorCurves } from './risk';
 import { applyScenarioShocks, nssYield } from './scenario';
 import { calculateKeyRateDurations, DEFAULT_KEY_TENORS } from './krd';
 import { NSSParameters } from './types';

@@ -149,7 +149,7 @@ export default function PrivacyPolicy() {
           </p>
           <p className="legal-contact">
             BondFactor<br />
-            Email: privacy@bondfactor.in<br />
+            Email: karbburn@gmail.com<br />
           </p>
         </section>
 

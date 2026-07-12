@@ -229,7 +229,7 @@ export default function TermsOfUse() {
           </p>
           <p className="legal-contact">
             BondFactor<br />
-            Email: legal@bondfactor.in<br />
+            Email: karbburn@gmail.com<br />
           </p>
         </section>
 

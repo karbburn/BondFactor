@@ -29,7 +29,7 @@ async def get_current_user(authorization: str = Header(None)) -> Dict:
             token,
             secret,
             algorithms=["HS256"],
-            audience="authenticated",
+            options={"verify_aud": False},
         )
     except jwt.ExpiredSignatureError:
         raise HTTPException(

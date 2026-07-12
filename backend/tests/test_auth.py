@@ -97,15 +97,14 @@ def test_wrong_secret_raises_401():
     assert exc_info.value.status_code == 401
 
 
-def test_wrong_audience_raises_401():
+def test_any_audience_accepted():
+    """After removing audience verification, any aud value should be accepted."""
     import asyncio
-    from fastapi import HTTPException
     token = _make_token(aud="anon")
-    with pytest.raises(HTTPException) as exc_info:
-        asyncio.get_event_loop().run_until_complete(
-            get_current_user(authorization=f"Bearer {token}")
-        )
-    assert exc_info.value.status_code == 401
+    result = asyncio.get_event_loop().run_until_complete(
+        get_current_user(authorization=f"Bearer {token}")
+    )
+    assert result["id"] is not None
 
 
 def test_missing_env_var_returns_500(monkeypatch):

@@ -5,6 +5,7 @@ scipy
 numpy
 pytest
 requests
+httpx
 anyio
 PyJWT
 fpdf2

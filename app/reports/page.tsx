@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { usePortfolio } from '../../lib/state/PortfolioContext';
 import { useAuth } from '../../lib/state/AuthContext';
 import { useScenario } from '../../lib/state/ScenarioContext';
@@ -39,6 +39,24 @@ export default function ReportsPage() {
         clearInterval(pollIntervalRef.current);
       }
     };
+  }, []);
+
+  const downloadReport = useCallback(async (url: string, fmt: string) => {
+    try {
+      const supabase = getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `bondfactor_report.${fmt}`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Download failed');
+    }
   }, []);
 
   const handleCancel = () => {
@@ -271,15 +289,13 @@ export default function ReportsPage() {
               )}
 
               {report.status === 'completed' && report.download_url && (
-                <a
-                  href={report.download_url}
+                <button
                   className="btn font-mono"
-                  style={{ fontSize: '11px', textAlign: 'center', textDecoration: 'none', display: 'block', marginTop: '10px' }}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  style={{ fontSize: '11px', textAlign: 'center', display: 'block', marginTop: '10px', width: '100%' }}
+                  onClick={() => downloadReport(report.download_url!, format)}
                 >
                   DOWNLOAD {format.toUpperCase()}
-                </a>
+                </button>
               )}
             </div>
           )}

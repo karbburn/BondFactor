@@ -445,38 +445,76 @@ def _render_pdf(path, portfolio_name, curve_date, scenario_results, base_zc_data
 def _render_xlsx(path, portfolio_name, curve_date, scenario_results, base_zc_data):
     from openpyxl import Workbook
     from openpyxl.chart import LineChart, Reference, BarChart
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.utils import get_column_letter
 
     wb = Workbook()
 
-    # Summary sheet
+    hdr_font = Font(bold=True, color="FFFFFF", size=10)
+    hdr_fill = PatternFill(start_color="13141A", end_color="13141A", fill_type="solid")
+    lbl_font = Font(bold=True, size=10)
+    green_font = Font(color="2D9B75")
+    red_font = Font(color="EB7355")
+    num_fmt_money = '#,##0.00'
+    num_fmt_int = '#,##0'
+    num_fmt_4 = '0.0000'
+    num_fmt_6 = '0.000000'
+    num_fmt_3 = '0.000'
+
+    def _set_col_widths(ws, widths):
+        for i, w in enumerate(widths, 1):
+            ws.column_dimensions[get_column_letter(i)].width = w
+
+    def _style_header(ws, row, ncols):
+        for c in range(1, ncols + 1):
+            cell = ws.cell(row=row, column=c)
+            cell.font = hdr_font
+            cell.fill = hdr_fill
+            cell.alignment = Alignment(horizontal="center")
+
+    # ── Summary sheet ────────────────────────────────────────────────────
     ws = wb.active
     ws.title = "Summary"
     ws.append(["BondFactor Risk Report"])
+    ws["A1"].font = Font(bold=True, size=14)
     ws.append([f"Portfolio: {portfolio_name}"])
     ws.append([f"Curve Date: {curve_date}"])
     ws.append([f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"])
     ws.append([])
+    _set_col_widths(ws, [30, 20])
 
     for sc in scenario_results:
         ws.append([f"Scenario: {sc['name']}"])
+        ws.cell(ws.max_row, 1).font = lbl_font
         agg = sc["summary"]
-        for label, val in [
-            ("Total Base Dirty Value", agg["total_base_dirty"]),
-            ("Total Base Clean Value", agg["total_base_clean"]),
-            ("Total Shocked Dirty Value", agg["total_shocked_dirty"]),
-            ("Scenario P&L", agg["total_pnl"]),
-            ("Modified Duration", agg["port_mod_dur"]),
-            ("Total DV01", agg["total_dv01"]),
-            ("Convexity", agg["port_convexity"]),
+        for label, val, fmt in [
+            ("Total Base Dirty Value", agg["total_base_dirty"], num_fmt_money),
+            ("Total Base Clean Value", agg["total_base_clean"], num_fmt_money),
+            ("Total Shocked Dirty Value", agg["total_shocked_dirty"], num_fmt_money),
+            ("Scenario P&L", agg["total_pnl"], num_fmt_money),
+            ("Modified Duration", agg["port_mod_dur"], num_fmt_4),
+            ("Total DV01", agg["total_dv01"], num_fmt_money),
+            ("Convexity", agg["port_convexity"], num_fmt_4),
         ]:
             ws.append([label, val])
+            r = ws.max_row
+            ws.cell(r, 1).font = lbl_font
+            ws.cell(r, 2).number_format = fmt
+            if "P&L" in label:
+                ws.cell(r, 2).font = green_font if val >= 0 else red_font
         ws.append([])
 
-    # Zero curve sheet
+    # ── Zero Curve sheet ─────────────────────────────────────────────────
     ws_zc = wb.create_sheet("Zero Curve")
     ws_zc.append(["Tenor (Y)", "Zero Rate (%)", "Discount Factor"])
+    _style_header(ws_zc, 1, 3)
+    _set_col_widths(ws_zc, [12, 16, 16])
     for pt in base_zc_data:
         ws_zc.append([pt["tenor"], pt["rate"], pt["df"]])
+        r = ws_zc.max_row
+        ws_zc.cell(r, 2).number_format = num_fmt_4
+        ws_zc.cell(r, 3).number_format = num_fmt_6
+    ws_zc.freeze_panes = "A2"
 
     chart = LineChart()
     chart.title = "Base Zero Curve"
@@ -484,37 +522,64 @@ def _render_xlsx(path, portfolio_name, curve_date, scenario_results, base_zc_dat
     chart.x_axis.title = "Maturity (Years)"
     chart.width = 20
     chart.height = 12
+    chart.style = 10
     data_ref = Reference(ws_zc, min_col=2, min_row=1, max_row=len(base_zc_data) + 1)
     cats = Reference(ws_zc, min_col=1, min_row=2, max_row=len(base_zc_data) + 1)
     chart.add_data(data_ref, titles_from_data=True)
     chart.set_categories(cats)
     ws_zc.add_chart(chart, "E2")
 
-    # Per-scenario sheets
+    # ── Per-scenario sheets ──────────────────────────────────────────────
+    pos_headers = ["ISIN", "Security", "Face Value", "Base Clean", "Base Dirty", "Accrued",
+                   "YTM%", "Mod Dur", "DV01", "Convexity", "Shocked Dirty", "P&L"]
+    pos_widths = [15, 30, 14, 14, 14, 12, 10, 10, 14, 12, 14, 14]
+    pos_fmts = [None, None, num_fmt_int, num_fmt_4, num_fmt_4, num_fmt_4,
+                num_fmt_4, num_fmt_4, num_fmt_money, num_fmt_4, num_fmt_4, num_fmt_money]
+
     for sc_idx, sc in enumerate(scenario_results):
         ws_sc = wb.create_sheet(f"Scenario {sc_idx + 1}")
+        s = sc["shocks"]
         ws_sc.append([f"Scenario: {sc['name']}"])
+        ws_sc.cell(1, 1).font = Font(bold=True, size=12)
+        ws_sc.append([f"Parallel: {s['parallel_shift']:+.2f}%  Slope: {s['slope_shock']:+.2f}%  "
+                      f"Curv1: {s['curvature1_shock']:+.2f}%  Curv2: {s['curvature2_shock']:+.2f}%  "
+                      f"Twist: {s['twist_shock']:+.2f}%  Pivot: {s['twist_pivot']:.1f}Y"])
         ws_sc.append([])
 
-        # Positions
-        ws_sc.append(["ISIN", "Security", "Face Value", "Base Clean", "Base Dirty", "Accrued",
-                       "YTM%", "Mod Dur", "DV01", "Convexity", "Shocked Dirty", "P&L"])
+        header_row = ws_sc.max_row + 1
+        ws_sc.append(pos_headers)
+        _style_header(ws_sc, header_row, len(pos_headers))
+        _set_col_widths(ws_sc, pos_widths)
+
         for p in sc["positions"]:
             ws_sc.append([p["isin"], p["name"], p["face_value"], p["base_clean"], p["base_dirty"],
                           p["accrued"], p["ytm"], p["mod_dur"], p["dv01"], p["convexity"],
                           p["shocked_dirty"], p["pnl"]])
+            r = ws_sc.max_row
+            for c, fmt in enumerate(pos_fmts, 1):
+                if fmt:
+                    ws_sc.cell(r, c).number_format = fmt
+            pnl_cell = ws_sc.cell(r, 12)
+            pnl_cell.font = green_font if p["pnl"] >= 0 else red_font
 
-        # KRD sheet
+        ws_sc.freeze_panes = f"A{header_row + 1}"
+
+        # ── KRD sheet ────────────────────────────────────────────────────
         ws_krd = wb.create_sheet(f"KRD {sc_idx + 1}")
-        tenor_labels = [f"{t}Y" if t >= 1 else f"{int(t*12)}M" for t in DEFAULT_KEY_TENORS]
+        tenor_labels = [f"{t}Y" if t >= 1 else f"{int(t * 12)}M" for t in DEFAULT_KEY_TENORS]
         ws_krd.append(["Tenor"] + tenor_labels)
+        _style_header(ws_krd, 1, len(tenor_labels) + 1)
         ws_krd.append(["Portfolio KRD"] + sc["summary"]["port_krd"])
+        for c in range(2, len(tenor_labels) + 2):
+            ws_krd.cell(2, c).number_format = num_fmt_3
+        _set_col_widths(ws_krd, [14] + [10] * len(tenor_labels))
 
         krd_chart = BarChart()
         krd_chart.title = f"KRD Profile — {sc['name']}"
         krd_chart.y_axis.title = "Duration"
         krd_chart.width = 20
         krd_chart.height = 12
+        krd_chart.style = 10
         krd_data = Reference(ws_krd, min_col=2, max_col=len(tenor_labels) + 1, min_row=2)
         krd_cats = Reference(ws_krd, min_col=2, max_col=len(tenor_labels) + 1, min_row=1)
         krd_chart.add_data(krd_data, from_rows=True, titles_from_data=False)

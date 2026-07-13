@@ -131,7 +131,7 @@ def test_get_key_rate_tenors(db_session: Session):
     res = client.get("/api/v1/key-rate-tenors")
     assert res.status_code == 200
     data = res.json()
-    assert data["effective_date"] == "2026-07-01"
+    assert data["effective_date"] == date.today().isoformat()
     assert len(data["tenors"]) == 12
     assert data["tenors"][0]["label"] == "91D"
     

@@ -93,6 +93,8 @@ def test_invalid_token_raises_401():
 def test_missing_env_url_returns_500(monkeypatch):
     import asyncio
     from fastapi import HTTPException
+    from api.dependencies import _token_cache
+    _token_cache.clear()
     monkeypatch.setattr(os, "getenv", lambda key, default="": "" if key == "SUPABASE_URL" else default)
     with pytest.raises(HTTPException) as exc_info:
         asyncio.get_event_loop().run_until_complete(

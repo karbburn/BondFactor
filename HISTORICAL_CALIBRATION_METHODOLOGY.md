@@ -68,8 +68,8 @@ $$\text{Shock Magnitude}_i = k \cdot \sigma_i = k \cdot \sqrt{\frac{1}{M-1} \sum
 ### Selection
 We select **Approach 1 (Fixed Lookback Window Percentile)** at the **95th percentile** of absolute daily changes as our calibration methodology. It provides a non-parametric, risk-tail aligned suggestion for Level, Slope, and Curvature shocks.
 
-### Coverage & Confidence Limitations (Stage 12 Alignment)
-As assessed in Stage 12, there is no free, programmatic API access to historical FBIL par yield curves. Our database curve archive starts accumulating from the application's deployment date forward.
+### Coverage & Confidence Limitations 
+There is no free, programmatic API access to historical FBIL par yield curves. Our database curve archive starts accumulating from the application's deployment date forward.
 
 Consequently:
 - In the initial phases of deployment, the number of archived curves $T$ will be very small (e.g., fewer than 90 days).

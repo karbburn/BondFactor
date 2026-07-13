@@ -44,7 +44,7 @@ All calculations use standard Indian G-Sec market conventions: semi-annual coupo
 │  Backend (FastAPI · Python 3.12 · Render)                        │
 │  ┌────────────┐  ┌───────────────┐  ┌────────────────────────┐  │
 │  │  Ingestion  │  │  Calibration  │  │  Portfolio CRUD       │  │
-│  │  FBIL→CSV   │  │  NSS + spline │  │  Auth + RLS           │  │
+│  │  NSE/FBIL   │  │  NSS + spline │  │  Auth + RLS           │  │
 │  └────────────┘  └───────────────┘  └────────────────────────┘  │
 └─────────────────────────────┬────────────────────────────────────┘
                               │
@@ -66,7 +66,7 @@ All calculations use standard Indian G-Sec market conventions: semi-annual coupo
 - **Calibration diagnostics** surfaced alongside the fitted curve — optimizer convergence, fit residual, parameter stability — so curve quality is never a black box.
 - **Separation of concerns:** Scenario P&L (factor-based, curve-level) and KRD (tenor-local, bucket-level) are computed independently, not derived from each other.
 
-Full methodology: [`assets/02_Quant_Methodology_BondFactor.md`](assets/02_Quant_Methodology_BondFactor.md)
+Full methodology: [`METHODOLOGY.md`](METHODOLOGY.md)
 
 ---
 
@@ -195,7 +195,7 @@ Three-layer testing strategy:
 | **Golden Reference** | Benchmark security pricing vs. independently sourced market values | Market-accepted range |
 
 ```bash
-# Backend (71 tests)
+# Backend (79 tests)
 cd backend && python -m pytest tests/ -v
 
 # Frontend type check
@@ -206,11 +206,11 @@ npx tsc --noEmit
 
 ## Data Sources
 
-| Source | Status | Notes |
-|--------|--------|-------|
-| **FBIL** | Primary | Daily par yield curves (G-Sec Par Yield, ZCYC). Manual CSV ingestion. |
-| **RBI DBIE** | Fallback | Database on Indian Economy API. |
-| **Manual CSV** | Guaranteed fallback | For when automated sources are unavailable |
+| Source | Type | Status | Notes |
+|--------|------|--------|-------|
+| **NSE ZCYC** | Zero-coupon yields | Automated | Programmatic fetch via NSE reports API. Cubic spline interpolation, no bootstrap. |
+| **FBIL** | Par yields | Primary | Daily benchmark par yield curves. Manual CSV ingestion. NSS fit → bootstrap. |
+| **Manual CSV** | Par yields | Guaranteed fallback | For when automated sources are unavailable |
 
 Historical coverage: reliable FBIL par yield data starts from March 31, 2018 (when FBIL took over from FIMMDA).
 

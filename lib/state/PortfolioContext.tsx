@@ -123,20 +123,26 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
 
     const portfolioId = result.id;
 
-    // Delete existing positions on update, then re-add
-    if (isUpdate && result.positions) {
-      await Promise.all(result.positions.map((pos: { id: string }) =>
-        apiFetch(`/api/v1/portfolios/${portfolioId}/positions/${pos.id}`, { method: "DELETE" })
+    // Atomic position replacement on update
+    if (isUpdate) {
+      await apiFetch(`/api/v1/portfolios/${portfolioId}/positions`, {
+        method: "PUT",
+        body: JSON.stringify({
+          positions: portfolio.map(pos => ({
+            security_id: pos.security.id,
+            face_value_held: pos.faceValue,
+          })),
+        }),
+      });
+    } else {
+      // Add positions for new portfolio
+      await Promise.all(portfolio.map((pos) =>
+        apiFetch(`/api/v1/portfolios/${portfolioId}/positions`, {
+          method: "POST",
+          body: JSON.stringify({ security_id: pos.security.id, face_value_held: pos.faceValue }),
+        })
       ));
     }
-
-    // Add current positions
-    await Promise.all(portfolio.map((pos) =>
-      apiFetch(`/api/v1/portfolios/${portfolioId}/positions`, {
-        method: "POST",
-        body: JSON.stringify({ security_id: pos.security.id, face_value_held: pos.faceValue }),
-      })
-    ));
 
     setActivePortfolioId(portfolioId);
     await fetchSavedPortfolios();

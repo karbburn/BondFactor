@@ -124,6 +124,9 @@ def generate_report(report_id: str):
         if not rec:
             logger.error(f"Report record {report_id} not found")
             return
+        if rec.status != "processing":
+            logger.info(f"Report {report_id} already {rec.status}, skipping")
+            return
 
         # Load portfolio
         portfolio = db.query(Portfolio).filter(Portfolio.id == rec.portfolio_id).first()
@@ -576,7 +579,7 @@ def _render_xlsx(path, portfolio_name, curve_date, scenario_results, base_zc_dat
 
         krd_chart = BarChart()
         krd_chart.title = f"KRD Profile — {sc['name']}"
-        krd_chart.y_axis.title = "Duration"
+        krd_chart.y_axis.title = "Sensitivity (₹/bp)"
         krd_chart.width = 20
         krd_chart.height = 12
         krd_chart.style = 10

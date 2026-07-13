@@ -1,45 +1,63 @@
 # BondFactor
 
-Fixed-income analytics for Indian Government Securities. Fit the benchmark yield curve, deform it under economically meaningful scenarios, and see how a G-Sec portfolio responds — price, duration, DV01, convexity, Key Rate Duration, and scenario P&L.
+**Fixed-income risk analytics for Indian Government Securities**
 
-**Live:** [bondfactor.vercel.app](https://bondfactor.vercel.app) · **API:** [bondfactor-api.onrender.com](https://bondfactor-api.onrender.com)
+Fit the benchmark yield curve, deform it under economically meaningful scenarios, and see how a G-Sec portfolio responds — price, duration, DV01, convexity, Key Rate Duration, and scenario P&L.
 
-## Capabilities
+[![Live](https://img.shields.io/badge/Live-bondfactor.vercel.app-blue)](https://bondfactor.vercel.app)
+[![API](https://img.shields.io/badge/API-bondfactor--api.onrender.com-green)](https://bondfactor-api.onrender.com)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12+-yellow)](https://python.org)
+[![Next.js 14](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org)
 
-1. **Yield curve fitting** — Nelson-Siegel-Svensson calibration to daily G-Sec par yields, cubic spline fallback on convergence failure.
-2. **Scenario deformation** — Factor-shock scenarios (parallel shift, steepener, flattener, twist, butterfly) applied as parameterized NSS perturbations.
-3. **Portfolio repricing** — Full risk stack recomputed client-side against the shocked curve, with DV01-weighted P&L and tenor-bucketed KRD decomposition.
+---
+
+## Overview
+
+BondFactor is a full-stack fixed-income analytics platform built for Indian Government Securities (G-Secs). It combines a production-grade Python quant backend with a real-time TypeScript pricing engine to deliver institutional-quality risk analysis in the browser.
+
+### Key Capabilities
+
+| Feature | Description |
+|---------|-------------|
+| **Yield Curve Fitting** | Nelson-Siegel-Svensson calibration to daily G-Sec par yields, cubic spline fallback on convergence failure |
+| **Scenario Deformation** | Factor-shock scenarios (parallel, steepener, flattener, twist, butterfly) as parameterized NSS perturbations |
+| **Portfolio Repricing** | Full risk stack recomputed client-side against the shocked curve — DV01-weighted P&L and tenor-bucketed KRD decomposition |
+| **Risk Reporting** | Server-side PDF and Excel report generation with branded output |
 
 All calculations use standard Indian G-Sec market conventions: semi-annual coupons, Actual/Actual day count, T+1 settlement.
+
+---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Frontend (Next.js 14, Vercel)                             │
-│  ┌─────────────────────┐  ┌──────────────────────────────┐  │
-│  │  Portfolio Builder   │  │  TypeScript Pricing Engine   │  │
-│  │  Curve Explorer      │  │  Bootstrap · Price · Risk    │  │
-│  │  Scenario Composer   │  │  Scenario · KRD              │  │
-│  └─────────────────────┘  └──────────────────────────────┘  │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ REST API
-┌──────────────────────────┴──────────────────────────────────┐
-│  Backend (FastAPI, Render)                                  │
-│  ┌────────────┐  ┌──────────────┐  ┌────────────────────┐  │
-│  │  Ingestion  │  │  Calibration │  │  Portfolio CRUD    │  │
-│  │  FBIL→CSV   │  │  NSS + spline│  │  Auth + RLS        │  │
-│  └────────────┘  └──────────────┘  └────────────────────┘  │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-┌──────────────────────────┴──────────────────────────────────┐
-│  Persistence (Supabase / Postgres)                          │
-│  Raw observations · Calibrations · Zero curves · Securities │
-│  Portfolios · Positions · Users                             │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│  Frontend (Next.js 14 · Vercel)                                  │
+│  ┌────────────────────┐  ┌────────────────────────────────────┐  │
+│  │  Portfolio Builder  │  │  TypeScript Pricing Engine         │  │
+│  │  Curve Explorer     │  │  Bootstrap · Price · Risk          │  │
+│  │  Scenario Composer  │  │  Scenario · KRD                    │  │
+│  └────────────────────┘  └────────────────────────────────────┘  │
+└─────────────────────────────┬────────────────────────────────────┘
+                              │ REST API
+┌─────────────────────────────┴────────────────────────────────────┐
+│  Backend (FastAPI · Python 3.12 · Render)                        │
+│  ┌────────────┐  ┌───────────────┐  ┌────────────────────────┐  │
+│  │  Ingestion  │  │  Calibration  │  │  Portfolio CRUD       │  │
+│  │  FBIL→CSV   │  │  NSS + spline │  │  Auth + RLS           │  │
+│  └────────────┘  └───────────────┘  └────────────────────────┘  │
+└─────────────────────────────┬────────────────────────────────────┘
+                              │
+┌─────────────────────────────┴────────────────────────────────────┐
+│  Persistence (Supabase · PostgreSQL)                             │
+│  Observations · Calibrations · Zero curves · Securities          │
+│  Portfolios · Positions · Users                                  │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-**Key design decision:** The server ships fitted NSS parameters. The client always bootstraps its own zero curve — base and scenario-shocked — via a parity-tested TypeScript implementation. Scenario repricing is entirely client-side (target ~100ms for 50 positions) with no network round-trip.
+**Design Decision:** The server ships fitted NSS parameters. The client always bootstraps its own zero curve — base and scenario-shocked — via a parity-tested TypeScript implementation. Scenario repricing is entirely client-side (~100ms for 50 positions) with no network round-trip.
+
+---
 
 ## Quantitative Rigor
 
@@ -48,7 +66,9 @@ All calculations use standard Indian G-Sec market conventions: semi-annual coupo
 - **Calibration diagnostics** surfaced alongside the fitted curve — optimizer convergence, fit residual, parameter stability — so curve quality is never a black box.
 - **Separation of concerns:** Scenario P&L (factor-based, curve-level) and KRD (tenor-local, bucket-level) are computed independently, not derived from each other.
 
-Full methodology documentation: `assets/02_Quant_Methodology_BondFactor.md`
+Full methodology: [`assets/02_Quant_Methodology_BondFactor.md`](assets/02_Quant_Methodology_BondFactor.md)
+
+---
 
 ## Tech Stack
 
@@ -61,15 +81,17 @@ Full methodology documentation: `assets/02_Quant_Methodology_BondFactor.md`
 | Auth | Supabase Auth (JWT) | Supabase |
 | Database | PostgreSQL | Supabase |
 
+---
+
 ## Getting Started
 
 ### Prerequisites
 
 - Python 3.12+
 - Node.js 18+
-- Supabase project (free tier works)
+- Supabase project ([free tier](https://supabase.com/pricing) works)
 
-### Backend
+### Backend Setup
 
 ```bash
 cd backend
@@ -78,73 +100,62 @@ venv\Scripts\activate        # Windows
 # source venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
 
-# Configure environment
 cp .env.example .env        # add your Supabase credentials
-
-# Run tests
-python -m pytest tests/ -v
-
-# Start server
-uvicorn main:app --reload
+python -m pytest tests/ -v  # run tests
+uvicorn main:app --reload   # start server
 ```
 
-### Frontend
+### Frontend Setup
 
 ```bash
 npm install
-
-# Configure environment
-cp .env.local.example .env.local   # add Supabase URL + publishable key
-
-# Development
-npm run dev
-
-# Production build
-npm run build
+cp .env.local.example .env.local   # add Supabase URL + anon key
+npm run dev                         # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+---
 
-## API Endpoints
+## API Reference
 
-### Public (no auth)
+### Public Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
+| Method | Endpoint | Description |
+|--------|----------|-------------|
 | `GET` | `/api/v1/curves/latest` | Latest fitted curve (NSS params + diagnostics) |
 | `GET` | `/api/v1/curves/{date}` | Curve for a specific date |
 | `GET` | `/api/v1/key-rate-tenors` | Key rate tenor grid |
 | `GET` | `/api/v1/securities` | G-Sec master list |
 
-### Authenticated (Bearer token required)
+### Authenticated Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/portfolios` | List user's portfolios |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/portfolios` | List portfolios |
 | `POST` | `/api/v1/portfolios` | Create portfolio |
 | `GET` | `/api/v1/portfolios/{id}` | Get portfolio with positions |
 | `PUT` | `/api/v1/portfolios/{id}` | Rename portfolio |
-| `DELETE` | `/api/v1/portfolios/{id}` | Delete portfolio + positions |
+| `DELETE` | `/api/v1/portfolios/{id}` | Delete portfolio |
 | `POST` | `/api/v1/portfolios/{id}/positions` | Add position |
 | `DELETE` | `/api/v1/portfolios/{id}/positions/{pid}` | Remove position |
-| `GET` | `/api/v1/scenarios/saved` | List user's saved scenarios |
-| `POST` | `/api/v1/scenarios/saved` | Create saved scenario |
+| `GET` | `/api/v1/scenarios/saved` | List saved scenarios |
+| `POST` | `/api/v1/scenarios/saved` | Save scenario |
 | `GET` | `/api/v1/scenarios/saved/{id}` | Get saved scenario |
 | `DELETE` | `/api/v1/scenarios/saved/{id}` | Delete saved scenario |
-| `POST` | `/api/v1/reports/generate` | Generate PDF/Excel report (async) |
-| `GET` | `/api/v1/reports/{id}` | Poll report generation status |
-| `GET` | `/api/v1/reports/{id}/download` | Download completed report |
+| `POST` | `/api/v1/reports/generate` | Generate report (async) |
+| `GET` | `/api/v1/reports/{id}` | Poll report status |
+| `GET` | `/api/v1/reports/{id}/download` | Download report |
+
+---
 
 ## Project Structure
 
 ```
 BondFactor/
-├── app/                          # Next.js pages
+├── app/                          # Next.js App Router pages
 │   ├── portfolio/                # Portfolio builder
 │   ├── portfolios/               # Saved portfolio manager
 │   ├── curve/                    # Curve explorer
 │   ├── validate/                 # Pricing validation
-│   ├── history/                  # Historical replay
 │   ├── reports/                  # Report generation
 │   ├── compare/                  # Multi-portfolio comparison
 │   └── login/                    # Authentication
@@ -157,31 +168,31 @@ BondFactor/
 │   ├── main.py                   # FastAPI application
 │   ├── api/routers/              # Endpoint definitions
 │   ├── api/schemas.py            # Pydantic models
-│   ├── api/dependencies.py       # Auth middleware
 │   ├── db/models.py              # SQLAlchemy models
-│   ├── db/session.py             # Database connection
-│   ├── quant_core/               # Python quant reference
-│   │   ├── conventions.py        # Market conventions
-│   │   ├── cashflow.py           # Cashflow generation
+│   ├── quant_core/               # Python quant reference implementation
 │   │   ├── nss.py                # Nelson-Siegel-Svensson
-│   │   ├── spline.py             # Cubic spline fitting
 │   │   ├── bootstrap.py          # Zero curve bootstrapping
 │   │   ├── pricing.py            # Bond pricing
-│   │   ├── risk.py               # Duration/DV01/convexity
+│   │   ├── risk.py               # Duration / DV01 / Convexity
 │   │   ├── scenario.py           # Factor-shock scenarios
 │   │   └── krd.py                # Key Rate Duration
 │   ├── ingestion/                # Data fetch + validation
-│   └── tests/                    # 71 tests (pytest)
-└── assets/                       # Design docs (gitignored)
+│   ├── services/                 # Report generation
+│   └── tests/                    # pytest suite
+└── assets/                       # Design docs, methodology
 ```
+
+---
 
 ## Testing
 
 Three-layer testing strategy:
 
-- **Layer 1 — Unit tests:** All `quant_core` functions tested against synthetic known-truth curves and hand-calculable cases.
-- **Layer 2 — Parity tests:** Every TypeScript pricing function validated against its Python counterpart (yield: 0.1bp, price: ₹0.01).
-- **Layer 3 — Golden reference:** Benchmark security pricing verified against independently sourced market values.
+| Layer | Scope | Tolerance |
+|-------|-------|-----------|
+| **Unit** | All `quant_core` functions against synthetic known-truth curves | Exact / machine precision |
+| **Parity** | Every TypeScript function validated against Python counterpart | Yield: 0.1bp, Price: ₹0.01 |
+| **Golden Reference** | Benchmark security pricing vs. independently sourced market values | Market-accepted range |
 
 ```bash
 # Backend (71 tests)
@@ -191,13 +202,19 @@ cd backend && python -m pytest tests/ -v
 npx tsc --noEmit
 ```
 
+---
+
 ## Data Sources
 
-- **FBIL** — Primary source for daily par yield curves (G-Sec Par Yield, ZCYC). No public API; manual CSV ingestion path.
-- **RBI DBIE** — Fallback source via Database on Indian Economy.
-- **Manual CSV** — Guaranteed fallback when automated sources are unavailable.
+| Source | Status | Notes |
+|--------|--------|-------|
+| **FBIL** | Primary | Daily par yield curves (G-Sec Par Yield, ZCYC). Manual CSV ingestion. |
+| **RBI DBIE** | Fallback | Database on Indian Economy API. |
+| **Manual CSV** | Guaranteed fallback | For when automated sources are unavailable |
 
-Historical data availability: reliable FBIL par yield data starts from March 31, 2018 (when FBIL took over from FIMMDA). Coverage builds up from the platform's launch date forward.
+Historical coverage: reliable FBIL par yield data starts from March 31, 2018 (when FBIL took over from FIMMDA).
+
+---
 
 ## Design Principles
 
@@ -207,11 +224,21 @@ Historical data availability: reliable FBIL par yield data starts from March 31,
 4. **Practitioner-legible output.** Every number uses conventions a rates desk would recognize.
 5. **Append-only historical data.** Curves and calibrations are never overwritten — a new day is a new row.
 
+---
+
 ## Roadmap
 
-- **Phase 1 (Complete):** Core analytics engine — ingestion, curve fitting, pricing, risk, scenarios, KRD, TypeScript parity, golden reference validation, full frontend.
-- **Phase 2 (Complete):** Platform features — authentication, portfolio persistence, multi-portfolio management, historical replay, PDF/Excel reporting, saved custom scenarios.
-- **Phase 3 (Indicative):** Advanced analytics — historical scenario calibration, risk attribution, performance optimization, expanded visualization.
+| Phase | Status | Scope |
+|-------|--------|-------|
+| **Phase 1** | ✅ Complete | Core analytics engine — ingestion, curve fitting, pricing, risk, scenarios, KRD, TypeScript parity, golden reference validation, full frontend |
+| **Phase 2** | ✅ Complete | Platform features — auth, portfolio persistence, multi-portfolio management, historical replay, PDF/Excel reporting, saved scenarios |
+| **Phase 3** | 🔜 Indicative | Advanced analytics — historical scenario calibration, risk attribution, performance optimization, expanded visualization |
+
+---
+
+## License
+
+Proprietary. All rights reserved.
 
 ---
 

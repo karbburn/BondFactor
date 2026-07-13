@@ -5,7 +5,8 @@ from ingestion.fbil_client import RawObservationBatch, FetchFailure
 
 def fetch(date: str) -> Union[RawObservationBatch, FetchFailure]:
     """
-    Fetches raw par yield observations from RBI DBIE.
+    Retrained/repurposed for manual/cross-validation and golden reference verification.
+    Originally fetched raw par yield observations from RBI DBIE.
     Returns RawObservationBatch on success, FetchFailure on failure.
     """
     url = os.getenv("DBIE_ENDPOINT_URL")

@@ -36,6 +36,7 @@ class CurveCalibration(Base):
     # Cubic spline parameters
     spline_knots = Column(JSON, nullable=True)
     
+    yield_type = Column(String, nullable=False, default="par")  # "par" | "zero_coupon"
     optimizer_converged = Column(Boolean, nullable=False)
     fit_residual_error = Column(Numeric, nullable=False)
     parameter_stability_delta = Column(Numeric, nullable=True)

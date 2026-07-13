@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-from ingestion import fbil_client, dbie_client, manual_csv_loader, validators
+from ingestion import nse_zcyc_client, manual_csv_loader, validators
 from ingestion.fbil_client import RawObservationBatch, FetchFailure
 from db.models import RawParYieldObservation
 
@@ -41,27 +41,21 @@ def persist_failed_attempt(db: Session, failure: FetchFailure):
 def run_ingestion(date: str, db: Session) -> RawObservationBatch:
     """
     Orchestrates the ingestion pipeline:
-      fbil -> dbie -> manual_csv -> raise operational alert
+      nse_zcyc -> manual_csv -> raise operational alert
     Validates observations before database persistence.
     """
     logger.info(f"Starting ingestion process for date: {date}")
     
-    # 1. Attempt FBIL
-    result = fbil_client.fetch(date)
+    # 1. Attempt NSE ZCYC
+    result = nse_zcyc_client.fetch(date)
     
-    # 2. Fall back to DBIE if FBIL fails
+    # 2. Fall back to manual CSV if NSE ZCYC fails
     if result.failed:
-        logger.warning(f"FBIL fetch failed for date {date}: {result.reason}. Attempting DBIE fallback...")
-        persist_failed_attempt(db, result)
-        result = dbie_client.fetch(date)
-        
-    # 3. Fall back to manual CSV if DBIE also fails
-    if result.failed:
-        logger.warning(f"DBIE fetch failed for date {date}: {result.reason}. Attempting manual CSV fallback...")
+        logger.warning(f"NSE ZCYC fetch failed for date {date}: {result.reason}. Attempting manual CSV fallback...")
         persist_failed_attempt(db, result)
         result = manual_csv_loader.fetch(date)
         
-    # 4. If all sources fail, flag manual import failure, raise alert, and raise exception
+    # 3. If all sources fail, flag manual import failure, raise alert, and raise exception
     if result.failed:
         persist_failed_attempt(db, result)
         logger.error(f"OPERATIONAL ALERT: All ingestion sources failed for date {date}. Final reason: {result.reason}")

@@ -9,7 +9,7 @@ from db.models import (
 )
 from quant_core.conventions import get_settlement_date, calculate_accrued_interest
 from quant_core.cashflow import generate_cashflows
-from quant_core.bootstrap import bootstrap_zero_curve
+from quant_core.bootstrap import bootstrap_zero_curve, build_zero_curve_from_zero_rates
 from quant_core.pricing import calculate_dirty_price, calculate_clean_price, calculate_ytm
 from quant_core.risk import (
     calculate_macaulay_duration, calculate_modified_duration, calculate_dv01, calculate_convexity,
@@ -23,10 +23,12 @@ logger = logging.getLogger("report_generator")
 REPORTS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "reports")
 
 
-def _build_zero_curve(params: dict):
+def _build_zero_curve(params: dict, yield_type: str = "par"):
     fn = lambda t: nss_yield(t, params["beta0"], params["beta1"], params["beta2"],
                              params["beta3"], params["tau1"], params["tau2"])
-    return bootstrap_zero_curve(fn, 40.0, 0.5)
+    if yield_type == "par":
+        return bootstrap_zero_curve(fn, 40.0, 0.5)
+    return build_zero_curve_from_zero_rates(fn, 40.0, 0.5)
 
 
 def _compute_position(sec, face_value, base_zc, shocked_zc, sd):
@@ -157,7 +159,7 @@ def generate_report(report_id: str):
             "beta2": float(cal.beta2), "beta3": float(cal.beta3),
             "tau1": float(cal.tau1), "tau2": float(cal.tau2),
         }
-        base_zc = _build_zero_curve(base_params)
+        base_zc = _build_zero_curve(base_params, cal.yield_type)
         curve_date = cal.curve_date
         sd = get_settlement_date(curve_date)
 
@@ -174,7 +176,7 @@ def generate_report(report_id: str):
                 "twist_pivot": sc.get("twist_pivot", 5.0),
             }
             shocked_params = apply_scenario_shocks(base_params, **shocks)
-            shocked_zc = _build_zero_curve(shocked_params)
+            shocked_zc = _build_zero_curve(shocked_params, cal.yield_type)
 
             pos_results = []
             for pp, sec in positions_db:

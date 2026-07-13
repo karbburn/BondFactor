@@ -555,6 +555,55 @@ def test_historical_calibration():
     assert res["latest_date"] == "2025-04-11"
 
 
+# Test: build_zero_curve_from_zero_rates bypasses par→zero bootstrap
+def test_build_zero_curve_from_zero_rates():
+    from quant_core.bootstrap import build_zero_curve_from_zero_rates
+
+    # Flat zero-coupon curve at 7%
+    flat_zc_fn = lambda t: 7.0
+    zc = build_zero_curve_from_zero_rates(flat_zc_fn, max_maturity=10.0, step_size=1.0)
+
+    assert len(zc.maturities) == 10
+    assert all(pytest.approx(zc.zero_rates[i]) == 7.0 for i in range(len(zc.zero_rates)))
+
+    # Discount factors: D(t) = exp(-0.07 * t)
+    for t, zr in zip(zc.maturities, zc.zero_rates):
+        expected_df = np.exp(-0.07 * t)
+        assert pytest.approx(zc.get_discount_factor(t), abs=1e-8) == expected_df
+
+
+# Test: build_zero_curve_from_zero_rates vs bootstrap_zero_curve produce different results
+# (because input is zero rates, not par yields)
+def test_zc_bypass_vs_bootstrap_diverge():
+    from quant_core.bootstrap import build_zero_curve_from_zero_rates
+
+    # Upward sloping zero-coupon curve
+    zc_fn = lambda t: 6.0 + 0.1 * t
+    zc_direct = build_zero_curve_from_zero_rates(zc_fn, max_maturity=10.0, step_size=1.0)
+
+    # Same function passed through bootstrap (treated as par yields) — should give different result
+    zc_bootstrapped = bootstrap_zero_curve(zc_fn, max_maturity=10.0, step_size=1.0)
+
+    # Zero rates should differ (bootstrap interprets input as par yields)
+    assert not np.allclose(zc_direct.zero_rates, zc_bootstrapped.zero_rates, atol=0.01)
+
+
+# Test: scenario shocks with yield_type="zero_coupon" uses direct build
+def test_scenario_shocks_zero_coupon():
+    from quant_core.scenario import get_shocked_zero_curve
+
+    base_params = {
+        "beta0": 7.2, "beta1": -1.5, "beta2": 2.0, "beta3": -0.8,
+        "tau1": 1.5, "tau2": 6.0,
+    }
+    zc = get_shocked_zero_curve(base_params, parallel_shift=0.1, yield_type="zero_coupon")
+    assert len(zc.maturities) > 0
+    # Zero-coupon bypass should produce valid discount factors
+    for t in [1.0, 5.0, 10.0]:
+        df = zc.get_discount_factor(t)
+        assert 0.0 < df < 1.0
+
+
 
 
 

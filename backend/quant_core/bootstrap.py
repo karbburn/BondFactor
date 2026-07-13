@@ -61,3 +61,13 @@ def bootstrap_zero_curve(par_curve_fn, max_maturity: float = 40.0, step_size: fl
     zero_rates = -np.log(discount_factors) / maturities * 100.0
     
     return ZeroCurve(maturities, zero_rates)
+
+def build_zero_curve_from_zero_rates(zc_curve_fn, max_maturity: float = 40.0, step_size: float = 0.5) -> ZeroCurve:
+    """
+    Builds a ZeroCurve directly from a zero-coupon curve function.
+    Use when the input is already zero-coupon rates (e.g. NSE ZCYC) — skips the par→zero bootstrap.
+    """
+    steps = int(max_maturity / step_size)
+    maturities = np.array([step_size * (i + 1) for i in range(steps)], dtype=float)
+    zero_rates = np.array([zc_curve_fn(t) for t in maturities], dtype=float)
+    return ZeroCurve(maturities, zero_rates)

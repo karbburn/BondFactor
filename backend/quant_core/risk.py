@@ -90,6 +90,7 @@ def calculate_position_factor_pnl_decomposition(
     twist_shock: float = 0.0,
     twist_pivot: float = 5.0,
     face_value: float = 100.0,
+    yield_type: str = "par",
 ) -> dict:
     """
     Decomposes the position P&L into contributions from Level, Slope, Curvature-1, and Curvature-2.
@@ -98,7 +99,7 @@ def calculate_position_factor_pnl_decomposition(
     """
     import numpy as np
     from quant_core.nss import nss_yield
-    from quant_core.bootstrap import bootstrap_zero_curve
+    from quant_core.bootstrap import bootstrap_zero_curve, build_zero_curve_from_zero_rates
     from quant_core.scenario import apply_scenario_shocks
 
     tau1 = base_params["tau1"]
@@ -114,9 +115,12 @@ def calculate_position_factor_pnl_decomposition(
     delta_beta3 = curvature2_shock
 
     def get_price_for_params(b0, b1, b2, b3):
-        def par_curve_fn(t):
+        def nss_fn(t):
             return nss_yield(t, b0, b1, b2, b3, base_params["tau1"], base_params["tau2"])
-        zc = bootstrap_zero_curve(par_curve_fn, max_maturity=40.0, step_size=0.5)
+        if yield_type == "par":
+            zc = bootstrap_zero_curve(nss_fn, max_maturity=40.0, step_size=0.5)
+        else:
+            zc = build_zero_curve_from_zero_rates(nss_fn, max_maturity=40.0, step_size=0.5)
         return calculate_dirty_price(settlement_date, cashflows, zc)
 
     p_base = get_price_for_params(

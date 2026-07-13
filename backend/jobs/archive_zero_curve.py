@@ -7,7 +7,7 @@ from sqlalchemy import func
 from db.models import RawParYieldObservation, CurveCalibration, ReferenceZeroCurve
 from quant_core.nss import calibrate_nss
 from quant_core.calibration_validation import validate_calibration
-from quant_core.bootstrap import bootstrap_zero_curve
+from quant_core.bootstrap import bootstrap_zero_curve, build_zero_curve_from_zero_rates
 
 logger = logging.getLogger("archive_zero_curve")
 
@@ -48,17 +48,24 @@ def archive_zero_curve(db: Session, curve_date) -> bool:
     if validation.fallback_used:
         model_type = "cubic_spline"
 
-    # Build par curve function for bootstrapping
+    # Determine yield type from source
+    source = rows[0].source
+    yield_type = "zero_coupon" if source == "nse_zcyc" else "par"
+
+    # Build curve function
     if model_type == "nss":
         from quant_core.nss import nss_yield
-        par_curve_fn = lambda t: nss_yield(t, *params)
+        curve_fn = lambda t: nss_yield(t, *params)
     else:
         from quant_core.spline import CubicSplineCurve
         spline = CubicSplineCurve(tenors, yields)
-        par_curve_fn = spline.evaluate
+        curve_fn = spline.evaluate
 
-    # Bootstrap zero curve
-    zc = bootstrap_zero_curve(par_curve_fn, 40.0, 0.5)
+    # Build zero curve (bootstrap for par yields, direct build for zero-coupon yields)
+    if yield_type == "par":
+        zc = bootstrap_zero_curve(curve_fn, 40.0, 0.5)
+    else:
+        zc = build_zero_curve_from_zero_rates(curve_fn, 40.0, 0.5)
 
     # Check if already archived for this date
     existing = db.query(CurveCalibration).filter(
@@ -72,6 +79,7 @@ def archive_zero_curve(db: Session, curve_date) -> bool:
         # Update existing calibration
         cal = existing
         cal.model_type = model_type
+        cal.yield_type = yield_type
         cal.optimizer_converged = opt_result.get("success", False)
         cal.fit_residual_error = validation.rmse
         cal.validation_status = "passed" if validation.passed else "failed_fallback_used"
@@ -89,6 +97,7 @@ def archive_zero_curve(db: Session, curve_date) -> bool:
         cal = CurveCalibration(
             curve_date=curve_date,
             model_type=model_type,
+            yield_type=yield_type,
             is_active=True,
             beta0=params[0] if model_type == "nss" else None,
             beta1=params[1] if model_type == "nss" else None,
@@ -117,5 +126,5 @@ def archive_zero_curve(db: Session, curve_date) -> bool:
         ))
 
     db.commit()
-    logger.info(f"Archived zero curve for {curve_date}: {len(zc.maturities)} points, model={model_type}")
+    logger.info(f"Archived zero curve for {curve_date}: {len(zc.maturities)} points, model={model_type}, yield_type={yield_type}")
     return True

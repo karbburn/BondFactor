@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from db.session import engine, SessionLocal
 from db.models import Base, RawParYieldObservation
 from ingestion.fbil_client import RawObservationBatch, FetchFailure
-from ingestion import fbil_client, dbie_client, manual_csv_loader, validators
+from ingestion import nse_zcyc_client, manual_csv_loader, validators
 from jobs.nightly_ingestion_job import run_ingestion, persist_failed_attempt, persist_raw_observations
 
 # Create tables in the in-memory SQLite database before tests run
@@ -35,99 +35,38 @@ MOCK_OBSERVATIONS = [
     {"tenor_label": "10Y", "tenor_years": 10.0, "par_yield": 7.28}
 ]
 
-class MockResponse:
-    def __init__(self, json_data, status_code):
-        self.json_data = json_data
-        self.status_code = status_code
-        self.text = "Mock Text Response"
-
-    def json(self):
-        return self.json_data
-
-# Test 1: FBIL Success Path
-@patch("requests.get")
-def test_fbil_success(mock_get, db_session: Session):
-    mock_get.return_value = MockResponse({"observations": MOCK_OBSERVATIONS}, 200)
+# Test 1: NSE ZCYC Success Path
+@patch("ingestion.nse_zcyc_client.fetch")
+def test_nse_zcyc_success(mock_fetch, db_session: Session):
+    mock_fetch.return_value = RawObservationBatch(
+        date="2026-07-10",
+        source="nse_zcyc",
+        observations=MOCK_OBSERVATIONS,
+        raw_payload={"mocked": True}
+    )
     
-    # We must set a mock endpoint URL so client actually makes the HTTP call instead of short-circuiting
-    with patch.dict(os.environ, {"FBIL_ENDPOINT_URL": "http://mock-fbil-endpoint"}):
-        batch = run_ingestion("2026-07-10", db_session)
+    batch = run_ingestion("2026-07-10", db_session)
         
-    assert batch.source == "fbil"
+    assert batch.source == "nse_zcyc"
     assert not batch.failed
     assert len(batch.observations) == 2
     
     # Verify DB contains the entries
     db_records = db_session.query(RawParYieldObservation).all()
     assert len(db_records) == 2
-    assert db_records[0].source == "fbil"
+    assert db_records[0].source == "nse_zcyc"
     assert db_records[0].fetch_status == "success"
     assert db_records[0].tenor_label == "91D"
     assert float(db_records[0].par_yield) == 6.85
 
-# Test 2: FBIL Fails, DBIE Succeeds (Fallback Path)
-@patch("requests.get")
-def test_fbil_fail_dbie_success(mock_get, db_session: Session):
-    # Mock FBIL to throw exception, DBIE to succeed
-    def side_effect(url, *args, **kwargs):
-        if "mock-fbil" in url:
-            raise Exception("Connection timed out")
-        elif "mock-dbie" in url:
-            return MockResponse({"observations": MOCK_OBSERVATIONS}, 200)
-        return MockResponse({}, 404)
-        
-    mock_get.side_effect = side_effect
-    
-    with patch.dict(os.environ, {
-        "FBIL_ENDPOINT_URL": "http://mock-fbil",
-        "DBIE_ENDPOINT_URL": "http://mock-dbie"
-    }):
-        batch = run_ingestion("2026-07-10", db_session)
-        
-    assert batch.source == "dbie"
-    assert len(batch.observations) == 2
-    
-    # Verify DB contains:
-    # 1. One failed audit record for FBIL
-    # 2. Two success records for DBIE
-    failed_record = db_session.query(RawParYieldObservation).filter_by(source="fbil").one()
-    assert failed_record.fetch_status == "failed"
-    
-    success_records = db_session.query(RawParYieldObservation).filter_by(source="dbie").all()
-    assert len(success_records) == 2
-    assert success_records[0].fetch_status == "success"
-
-# Test 3: Both FBIL & DBIE Fail, falls back to Manual CSV which fails (Complete failure)
-@patch("requests.get")
-def test_all_sources_fail(mock_get, db_session: Session):
-    mock_get.side_effect = Exception("General network error")
-    
-    with patch.dict(os.environ, {
-        "FBIL_ENDPOINT_URL": "http://mock-fbil",
-        "DBIE_ENDPOINT_URL": "http://mock-dbie"
-    }):
-        # Mock manual CSV file to not exist
-        if os.path.exists("backend/data/manual_yields_2026-07-10.csv"):
-            os.remove("backend/data/manual_yields_2026-07-10.csv")
-            
-        with pytest.raises(RuntimeError) as exc_info:
-            run_ingestion("2026-07-10", db_session)
-            
-    assert "All ingestion sources failed" in str(exc_info.value)
-    
-    # Verify DB contains failed logs for fbil, dbie, and manual_csv
-    fbil_fail = db_session.query(RawParYieldObservation).filter_by(source="fbil").one()
-    dbie_fail = db_session.query(RawParYieldObservation).filter_by(source="dbie").one()
-    manual_fail = db_session.query(RawParYieldObservation).filter_by(source="manual_csv").one()
-    
-    assert fbil_fail.fetch_status == "failed"
-    assert dbie_fail.fetch_status == "failed"
-    assert manual_fail.fetch_status == "failed"
-
-# Test 4: Both Fail, Manual CSV Succeeds
-@patch("requests.get")
-def test_manual_csv_fallback_success(mock_get, db_session: Session):
-    mock_get.side_effect = Exception("Network offline")
+# Test 2: NSE ZCYC Fails, manual_csv succeeds (Fallback Path)
+@patch("ingestion.nse_zcyc_client.fetch")
+def test_nse_zcyc_fail_manual_csv_success(mock_fetch, db_session: Session):
+    mock_fetch.return_value = FetchFailure(
+        date="2026-07-10",
+        source="nse_zcyc",
+        reason="API Timeout"
+    )
     
     # Create manual CSV file
     data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
@@ -143,25 +82,51 @@ def test_manual_csv_fallback_success(mock_get, db_session: Session):
         f.write(csv_content)
         
     try:
-        with patch.dict(os.environ, {
-            "FBIL_ENDPOINT_URL": "http://mock-fbil",
-            "DBIE_ENDPOINT_URL": "http://mock-dbie"
-        }):
-            batch = run_ingestion("2026-07-10", db_session)
-            
+        batch = run_ingestion("2026-07-10", db_session)
+        
         assert batch.source == "manual_csv"
         assert len(batch.observations) == 2
         
-        # Verify DB records
+        # Verify DB contains:
+        # 1. One failed audit record for nse_zcyc
+        # 2. Two success records for manual_csv
+        failed_record = db_session.query(RawParYieldObservation).filter_by(source="nse_zcyc").one()
+        assert failed_record.fetch_status == "failed"
+        
         success_records = db_session.query(RawParYieldObservation).filter_by(source="manual_csv", fetch_status="manual_override").all()
         assert len(success_records) == 2
         assert success_records[0].tenor_label == "91D"
         assert float(success_records[0].par_yield) == 6.85
         
     finally:
-        # Cleanup
         if os.path.exists(csv_path):
             os.remove(csv_path)
+
+# Test 3: NSE ZCYC & manual_csv both fail (Complete failure)
+@patch("ingestion.nse_zcyc_client.fetch")
+def test_all_sources_fail(mock_fetch, db_session: Session):
+    mock_fetch.return_value = FetchFailure(
+        date="2026-07-10",
+        source="nse_zcyc",
+        reason="API Connection Failure"
+    )
+    
+    # Mock manual CSV file to not exist
+    csv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "manual_yields_2026-07-10.csv"))
+    if os.path.exists(csv_path):
+        os.remove(csv_path)
+        
+    with pytest.raises(RuntimeError) as exc_info:
+        run_ingestion("2026-07-10", db_session)
+            
+    assert "All ingestion sources failed" in str(exc_info.value)
+    
+    # Verify DB contains failed logs for nse_zcyc and manual_csv
+    nse_fail = db_session.query(RawParYieldObservation).filter_by(source="nse_zcyc").one()
+    manual_fail = db_session.query(RawParYieldObservation).filter_by(source="manual_csv").one()
+    
+    assert nse_fail.fetch_status == "failed"
+    assert manual_fail.fetch_status == "failed"
 
 # Test 5: Validators
 def test_validators():

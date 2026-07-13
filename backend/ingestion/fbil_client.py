@@ -20,7 +20,8 @@ class FetchFailure:
 
 def fetch(date: str) -> Union[RawObservationBatch, FetchFailure]:
     """
-    Fetches raw par yield observations from FBIL.
+    Retrained/repurposed for manual/cross-validation and golden reference verification.
+    Originally fetched raw par yield observations from FBIL.
     Returns RawObservationBatch on success, FetchFailure on failure.
     """
     url = os.getenv("FBIL_ENDPOINT_URL")

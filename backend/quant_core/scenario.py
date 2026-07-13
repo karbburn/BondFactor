@@ -1,6 +1,6 @@
 import numpy as np
 from quant_core.nss import nss_yield
-from quant_core.bootstrap import bootstrap_zero_curve
+from quant_core.bootstrap import bootstrap_zero_curve, build_zero_curve_from_zero_rates
 
 def apply_scenario_shocks(
     base_params: dict,
@@ -56,7 +56,8 @@ def get_shocked_zero_curve(
     twist_shock: float = 0.0,
     twist_pivot: float = 5.0,
     max_maturity: float = 40.0,
-    step_size: float = 0.5
+    step_size: float = 0.5,
+    yield_type: str = "par"
 ):
     """
     Returns a new ZeroCurve after applying the NSS factor shocks and bootstrapping.
@@ -71,7 +72,7 @@ def get_shocked_zero_curve(
         twist_pivot=twist_pivot
     )
     
-    def par_curve_fn(t):
+    def zc_fn(t):
         return nss_yield(
             t,
             shocked_params["beta0"],
@@ -82,4 +83,6 @@ def get_shocked_zero_curve(
             shocked_params["tau2"]
         )
         
-    return bootstrap_zero_curve(par_curve_fn, max_maturity=max_maturity, step_size=step_size)
+    if yield_type == "par":
+        return bootstrap_zero_curve(zc_fn, max_maturity=max_maturity, step_size=step_size)
+    return build_zero_curve_from_zero_rates(zc_fn, max_maturity=max_maturity, step_size=step_size)

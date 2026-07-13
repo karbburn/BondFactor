@@ -49,6 +49,8 @@ export default function FactorContributionChart({ factorPnL, title = 'NSS Factor
       role="img"
       aria-label={title}
     >
+      <title>{title}</title>
+      <desc>Bar chart showing NSS factor-level P&L contributions for level, slope, curvature, and residual components</desc>
       {/* Zero baseline */}
       <line
         x1={zeroX}
@@ -79,7 +81,7 @@ export default function FactorContributionChart({ factorPnL, title = 'NSS Factor
         const isHovered = hoveredIdx === idx;
         const barColor = val >= 0
           ? (isHovered ? 'var(--accent-hover)' : 'var(--accent)')
-          : (isHovered ? 'var(--negative)' : 'var(--negative)');
+          : 'var(--negative)';
         const barOpacity = isHovered ? '1.0' : '0.8';
 
         return (
@@ -114,8 +116,11 @@ export default function FactorContributionChart({ factorPnL, title = 'NSS Factor
               fill={barColor}
               opacity={barOpacity}
               rx="1"
+              tabIndex={0}
               onMouseEnter={() => setHoveredIdx(idx)}
               onMouseLeave={() => setHoveredIdx(null)}
+              onFocus={() => setHoveredIdx(idx)}
+              onBlur={() => setHoveredIdx(null)}
               style={{ cursor: 'pointer', transition: 'fill 0.15s ease, opacity 0.15s ease' }}
             />
 

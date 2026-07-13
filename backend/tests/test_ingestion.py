@@ -31,8 +31,8 @@ def db_session():
 
 # Sample data for mocking
 MOCK_OBSERVATIONS = [
-    {"tenor_label": "91D", "tenor_years": 0.25, "par_yield": 6.85},
-    {"tenor_label": "10Y", "tenor_years": 10.0, "par_yield": 7.28}
+    {"tenor_label": "91D", "tenor_years": 0.25, "yield_value": 6.85},
+    {"tenor_label": "10Y", "tenor_years": 10.0, "yield_value": 7.28}
 ]
 
 # Test 1: NSE ZCYC Success Path
@@ -57,7 +57,7 @@ def test_nse_zcyc_success(mock_fetch, db_session: Session):
     assert db_records[0].source == "nse_zcyc"
     assert db_records[0].fetch_status == "success"
     assert db_records[0].tenor_label == "91D"
-    assert float(db_records[0].par_yield) == 6.85
+    assert float(db_records[0].yield_value) == 6.85
 
 # Test 2: NSE ZCYC Fails, manual_csv succeeds (Fallback Path)
 @patch("ingestion.nse_zcyc_client.fetch")
@@ -74,7 +74,7 @@ def test_nse_zcyc_fail_manual_csv_success(mock_fetch, db_session: Session):
     csv_path = os.path.join(data_dir, "manual_yields_2026-07-10.csv")
     
     csv_content = (
-        "observation_date,tenor_label,tenor_years,par_yield\n"
+        "observation_date,tenor_label,tenor_years,yield_value\n"
         "2026-07-10,91D,0.25,6.85\n"
         "2026-07-10,10Y,10.0,7.28\n"
     )
@@ -96,7 +96,7 @@ def test_nse_zcyc_fail_manual_csv_success(mock_fetch, db_session: Session):
         success_records = db_session.query(RawParYieldObservation).filter_by(source="manual_csv", fetch_status="manual_override").all()
         assert len(success_records) == 2
         assert success_records[0].tenor_label == "91D"
-        assert float(success_records[0].par_yield) == 6.85
+        assert float(success_records[0].yield_value) == 6.85
         
     finally:
         if os.path.exists(csv_path):
@@ -135,8 +135,8 @@ def test_validators():
         date="2026-07-10",
         source="fbil",
         observations=[
-            {"tenor_label": "91D", "tenor_years": 0.25, "par_yield": 6.85},
-            {"tenor_label": "10Y", "tenor_years": 10.0, "par_yield": 7.28}
+            {"tenor_label": "91D", "tenor_years": 0.25, "yield_value": 6.85},
+            {"tenor_label": "10Y", "tenor_years": 10.0, "yield_value": 7.28}
         ]
     )
     assert validators.validate(valid_batch) == valid_batch
@@ -151,7 +151,7 @@ def test_validators():
     bad_tenor_batch = RawObservationBatch(
         date="2026-07-10",
         source="fbil",
-        observations=[{"tenor_label": "91D", "tenor_years": -0.25, "par_yield": 6.85}]
+        observations=[{"tenor_label": "91D", "tenor_years": -0.25, "yield_value": 6.85}]
     )
     with pytest.raises(validators.ValidationError) as exc:
         validators.validate(bad_tenor_batch)
@@ -161,7 +161,7 @@ def test_validators():
     bad_yield_batch = RawObservationBatch(
         date="2026-07-10",
         source="fbil",
-        observations=[{"tenor_label": "91D", "tenor_years": 0.25, "par_yield": 95.0}]
+        observations=[{"tenor_label": "91D", "tenor_years": 0.25, "yield_value": 95.0}]
     )
     with pytest.raises(validators.ValidationError) as exc:
         validators.validate(bad_yield_batch)

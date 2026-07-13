@@ -15,7 +15,7 @@ def persist_raw_observations(db: Session, batch: RawObservationBatch, status: st
             source=batch.source,
             tenor_label=point["tenor_label"],
             tenor_years=point["tenor_years"],
-            par_yield=point["par_yield"],
+            yield_value=point["yield_value"],
             fetch_status=status,
             fetched_at=datetime.now(timezone.utc),
             raw_payload=batch.raw_payload if isinstance(batch.raw_payload, (dict, list)) else {"payload": str(batch.raw_payload)}
@@ -30,7 +30,7 @@ def persist_failed_attempt(db: Session, failure: FetchFailure):
         source=failure.source,
         tenor_label=None,
         tenor_years=None,
-        par_yield=None,
+        yield_value=None,
         fetch_status="failed",
         fetched_at=datetime.now(timezone.utc),
         raw_payload={"reason": failure.reason, "raw_payload": str(failure.raw_payload)}

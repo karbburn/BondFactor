@@ -160,14 +160,14 @@ def test_fetch_success(mock_open_workbook, mock_session):
     obs_map = {obs["tenor_label"]: obs for obs in result.observations}
     
     # 91D (0.25Y) matches 0.25 row yield (4.0239)
-    assert obs_map["91D"]["par_yield"] == 4.0239
+    assert obs_map["91D"]["yield_value"] == 4.0239
     
     # 182D (0.50Y) matches 0.50 row yield (4.3893)
-    assert obs_map["182D"]["par_yield"] == 4.3893
+    assert obs_map["182D"]["yield_value"] == 4.3893
     
     # 10Y (10.0Y) matches 10.0 row yield (8.0772)
-    assert obs_map["10Y"]["par_yield"] == 8.0772
+    assert obs_map["10Y"]["yield_value"] == 8.0772
     
     # 30Y and 40Y should be flatly extrapolated to 20Y row yield (8.4794)
-    assert obs_map["30Y"]["par_yield"] == 8.4794
-    assert obs_map["40Y"]["par_yield"] == 8.4794
+    assert obs_map["30Y"]["yield_value"] == 8.4794
+    assert obs_map["40Y"]["yield_value"] == 8.4794

@@ -191,7 +191,7 @@ def fetch(date_str: str) -> Union[RawObservationBatch, FetchFailure]:
                 observations.append({
                     "tenor_label": label,
                     "tenor_years": target,
-                    "par_yield": yield_val
+                    "yield_value": yield_val
                 })
             else:
                 # Find closest tenor
@@ -212,7 +212,7 @@ def fetch(date_str: str) -> Union[RawObservationBatch, FetchFailure]:
                     observations.append({
                         "tenor_label": label,
                         "tenor_years": target,
-                        "par_yield": yield_val
+                        "yield_value": yield_val
                     })
                     
         return RawObservationBatch(

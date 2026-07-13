@@ -30,7 +30,7 @@ def fetch(date: str) -> Union[RawObservationBatch, FetchFailure]:
 
         reader = csv.DictReader(io.StringIO(content))
         headers = set(reader.fieldnames or [])
-        required_headers = {"observation_date", "tenor_label", "tenor_years", "par_yield"}
+        required_headers = {"observation_date", "tenor_label", "tenor_years", "yield_value"}
         
         if not required_headers.issubset(headers):
             return FetchFailure(
@@ -45,7 +45,7 @@ def fetch(date: str) -> Union[RawObservationBatch, FetchFailure]:
                     observations.append({
                         "tenor_label": row["tenor_label"],
                         "tenor_years": float(row["tenor_years"]),
-                        "par_yield": float(row["par_yield"])
+                        "yield_value": float(row["yield_value"])
                     })
                 except (ValueError, TypeError) as e:
                     return FetchFailure(

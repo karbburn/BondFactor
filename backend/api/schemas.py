@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List, Literal
 from datetime import date
 
@@ -51,7 +51,7 @@ class SecurityResponse(BaseModel):
 
 # Portfolio schemas
 class PortfolioCreate(BaseModel):
-    portfolio_name: str
+    portfolio_name: str = Field(..., min_length=1)
 
 class PortfolioUpdate(BaseModel):
     portfolio_name: str

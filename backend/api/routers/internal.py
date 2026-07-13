@@ -1,4 +1,5 @@
 import os
+import hmac
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -43,7 +44,7 @@ def trigger_ingestion(
         )
 
     token = authorization.split(" ")[1]
-    if token != service_key:
+    if not hmac.compare_digest(token, service_key):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid service key."
@@ -99,7 +100,7 @@ def get_ingestion_status(
         )
 
     token = authorization.split(" ")[1]
-    if token != service_key:
+    if not hmac.compare_digest(token, service_key):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid service key."

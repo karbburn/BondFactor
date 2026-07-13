@@ -1,8 +1,12 @@
 import os
+import time
 import httpx
 from fastapi import Header, HTTPException
 from typing import Dict
 
+    # In-memory token cache, 60s TTL — saves a Supabase roundtrip per request
+_token_cache: Dict[str, tuple] = {}
+_CACHE_TTL = 60
 
 async def get_current_user(authorization: str = Header(None)) -> Dict:
     """Validates a Supabase-issued Bearer token via Supabase's /auth/v1/user endpoint.
@@ -17,6 +21,15 @@ async def get_current_user(authorization: str = Header(None)) -> Dict:
         )
 
     token = authorization.split(" ", 1)[1]
+
+    # Check cache
+    now = time.time()
+    if token in _token_cache:
+        user_data, expiry = _token_cache[token]
+        if now < expiry:
+            return user_data
+        del _token_cache[token]
+
     supabase_url = os.getenv("SUPABASE_URL")
     service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
@@ -52,8 +65,13 @@ async def get_current_user(authorization: str = Header(None)) -> Dict:
         )
 
     data = resp.json()
-    return {
+    user_data = {
         "id": data.get("id"),
         "email": data.get("email"),
         "role": data.get("role"),
     }
+
+    # Cache successful result
+    _token_cache[token] = (user_data, now + _CACHE_TTL)
+
+    return user_data

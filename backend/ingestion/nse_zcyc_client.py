@@ -46,7 +46,13 @@ def fetch(date_str: str) -> Union[RawObservationBatch, FetchFailure]:
     # Step 1: Warm up the session by visiting the home page if not using a mock endpoint
     if not is_mock:
         try:
-            session.get("https://www.nseindia.com/", headers=session_headers, timeout=10)
+            warmup = session.get("https://www.nseindia.com/", headers=session_headers, timeout=10)
+            if warmup.status_code != 200:
+                return FetchFailure(
+                    date=date_str,
+                    source="nse_zcyc",
+                    reason=f"Session warm-up failed: HTTP {warmup.status_code}"
+                )
         except Exception as e:
             return FetchFailure(
                 date=date_str,

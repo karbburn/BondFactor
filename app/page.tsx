@@ -6,6 +6,7 @@ import { useResults } from '../lib/state/ResultsContext';
 import { formatCurrency } from '../lib/utils/format';
 import CurveChart from '../lib/components/CurveChart';
 import KRDLadder from '../lib/components/KRDLadder';
+import FactorContributionChart from '../lib/components/FactorContributionChart';
 import { DEFAULT_KEY_TENORS } from '../lib/pricing-engine/krd';
 
 export default function Dashboard() {
@@ -233,45 +234,52 @@ export default function Dashboard() {
               Approximate (First-Order Linear Attribution)
             </span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', padding: '15px' }}>
-            <div className="metric-card" style={{ padding: '10px' }}>
-              <div className="metric-label" style={{ fontSize: '10px' }}>Level Contribution (&beta;₀)</div>
-              <div className={`metric-value ${summary.factorPnL.level >= 0 ? 'text-success' : 'text-error'}`} style={{ fontSize: '16px' }}>
-                {summary.factorPnL.level >= 0 ? '+' : ''}
-                {formatCurrency(summary.factorPnL.level)}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', padding: '15px' }}>
+            <div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '15px' }}>
+                <div className="metric-card" style={{ padding: '10px' }}>
+                  <div className="metric-label" style={{ fontSize: '10px' }}>Level Contribution (&beta;₀)</div>
+                  <div className={`metric-value ${summary.factorPnL.level >= 0 ? 'text-success' : 'text-error'}`} style={{ fontSize: '16px' }}>
+                    {summary.factorPnL.level >= 0 ? '+' : ''}
+                    {formatCurrency(summary.factorPnL.level)}
+                  </div>
+                </div>
+                <div className="metric-card" style={{ padding: '10px' }}>
+                  <div className="metric-label" style={{ fontSize: '10px' }}>Slope Contribution (&beta;₁)</div>
+                  <div className={`metric-value ${summary.factorPnL.slope >= 0 ? 'text-success' : 'text-error'}`} style={{ fontSize: '16px' }}>
+                    {summary.factorPnL.slope >= 0 ? '+' : ''}
+                    {formatCurrency(summary.factorPnL.slope)}
+                  </div>
+                </div>
+                <div className="metric-card" style={{ padding: '10px' }}>
+                  <div className="metric-label" style={{ fontSize: '10px' }}>Curvature 1 (&beta;₂)</div>
+                  <div className={`metric-value ${summary.factorPnL.curvature1 >= 0 ? 'text-success' : 'text-error'}`} style={{ fontSize: '16px' }}>
+                    {summary.factorPnL.curvature1 >= 0 ? '+' : ''}
+                    {formatCurrency(summary.factorPnL.curvature1)}
+                  </div>
+                </div>
+                <div className="metric-card" style={{ padding: '10px' }}>
+                  <div className="metric-label" style={{ fontSize: '10px' }}>Curvature 2 (&beta;₃)</div>
+                  <div className={`metric-value ${summary.factorPnL.curvature2 >= 0 ? 'text-success' : 'text-error'}`} style={{ fontSize: '16px' }}>
+                    {summary.factorPnL.curvature2 >= 0 ? '+' : ''}
+                    {formatCurrency(summary.factorPnL.curvature2)}
+                  </div>
+                </div>
+                <div className="metric-card" style={{ padding: '10px', gridColumn: 'span 1' }}>
+                  <div className="metric-label" style={{ fontSize: '10px' }}>Interaction Residual</div>
+                  <div className={`metric-value ${summary.factorPnL.residual >= 0 ? 'text-success' : 'text-error'}`} style={{ fontSize: '16px' }}>
+                    {summary.factorPnL.residual >= 0 ? '+' : ''}
+                    {formatCurrency(summary.factorPnL.residual)}
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', lineHeight: '1.4' }}>
+                * Note: NSS factor decomposition is approximate due to non-linear yield curve and bootstrapping interactions. Sum of components + residual exactly equals total P&amp;L ({formatCurrency(summary.totalPnl)}).
               </div>
             </div>
-            <div className="metric-card" style={{ padding: '10px' }}>
-              <div className="metric-label" style={{ fontSize: '10px' }}>Slope Contribution (&beta;₁)</div>
-              <div className={`metric-value ${summary.factorPnL.slope >= 0 ? 'text-success' : 'text-error'}`} style={{ fontSize: '16px' }}>
-                {summary.factorPnL.slope >= 0 ? '+' : ''}
-                {formatCurrency(summary.factorPnL.slope)}
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <FactorContributionChart factorPnL={summary.factorPnL} hidePanelWrapper={true} />
             </div>
-            <div className="metric-card" style={{ padding: '10px' }}>
-              <div className="metric-label" style={{ fontSize: '10px' }}>Curvature 1 (&beta;₂)</div>
-              <div className={`metric-value ${summary.factorPnL.curvature1 >= 0 ? 'text-success' : 'text-error'}`} style={{ fontSize: '16px' }}>
-                {summary.factorPnL.curvature1 >= 0 ? '+' : ''}
-                {formatCurrency(summary.factorPnL.curvature1)}
-              </div>
-            </div>
-            <div className="metric-card" style={{ padding: '10px' }}>
-              <div className="metric-label" style={{ fontSize: '10px' }}>Curvature 2 (&beta;₃)</div>
-              <div className={`metric-value ${summary.factorPnL.curvature2 >= 0 ? 'text-success' : 'text-error'}`} style={{ fontSize: '16px' }}>
-                {summary.factorPnL.curvature2 >= 0 ? '+' : ''}
-                {formatCurrency(summary.factorPnL.curvature2)}
-              </div>
-            </div>
-            <div className="metric-card" style={{ padding: '10px' }}>
-              <div className="metric-label" style={{ fontSize: '10px' }}>Interaction Residual</div>
-              <div className={`metric-value ${summary.factorPnL.residual >= 0 ? 'text-success' : 'text-error'}`} style={{ fontSize: '16px' }}>
-                {summary.factorPnL.residual >= 0 ? '+' : ''}
-                {formatCurrency(summary.factorPnL.residual)}
-              </div>
-            </div>
-          </div>
-          <div style={{ padding: '0 15px 15px', fontSize: '10px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-            * Note: NSS factor decomposition is approximate due to non-linear yield curve and bootstrapping interactions. Sum of components + residual exactly equals total P&amp;L ({formatCurrency(summary.totalPnl)}).
           </div>
         </div>
       )}

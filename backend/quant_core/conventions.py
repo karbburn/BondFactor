@@ -17,7 +17,9 @@ def get_settlement_date(trade_date: date) -> date:
     weekday = trade_date.weekday()  # 0 = Monday, 6 = Sunday
     if weekday == 4:    # Friday -> Monday
         return trade_date + timedelta(days=3)
-    elif weekday == 5 or weekday == 6:  # Saturday/Sunday -> Tuesday
+    elif weekday == 5:    # Saturday -> Monday (T+1)
+        return trade_date + timedelta(days=2)
+    elif weekday == 6:    # Sunday -> Tuesday (T+1)
         return trade_date + timedelta(days=2)
     else:               # Monday-Thursday -> Next Day
         return trade_date + timedelta(days=1)
@@ -38,6 +40,7 @@ def calculate_accrued_interest(
         return 0.0
         
     if settlement_date >= maturity_date:
+        # On maturity, final coupon is paid separately — no accrued interest
         return 0.0
 
     # Import schedule builder here to avoid circular imports

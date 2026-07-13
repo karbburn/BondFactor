@@ -50,11 +50,6 @@ def archive_zero_curve(db: Session, curve_date) -> bool:
 
     # Build par curve function for bootstrapping
     if model_type == "nss":
-        par_curve_fn = lambda t: float(np.interp(
-            np.atleast_1d(t), tenors,
-            np.array([float(np.interp(t_, tenors, yields)) for t_ in np.atleast_1d(t)])
-        )) if len(tenors) > 0 else 7.0
-        # Simpler: use the NSS eval directly
         from quant_core.nss import nss_yield
         par_curve_fn = lambda t: nss_yield(t, *params)
     else:

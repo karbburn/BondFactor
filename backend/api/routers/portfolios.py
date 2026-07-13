@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
-from typing import Dict
+from typing import Dict, List
 import os
 import logging
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -107,7 +108,7 @@ def delete_portfolio(portfolio_id: str, user: Dict = Depends(get_current_user), 
         logger.exception(f"Failed to delete portfolio {portfolio_id}")
         raise HTTPException(500, detail={"code": "INTERNAL_SERVER_ERROR", "message": "Failed to delete portfolio"})
 
-    # ponytail: best-effort file cleanup — don't fail the request if files are gone
+    # Best-effort file cleanup — don't fail the request if files are gone
     for path in report_files:
         try:
             if os.path.exists(path):
@@ -117,6 +118,39 @@ def delete_portfolio(portfolio_id: str, user: Dict = Depends(get_current_user), 
 
 
 # ── Position CRUD ───────────────────────────────────────────────
+
+class PositionsReplaceRequest(BaseModel):
+    positions: List[PositionCreate]
+
+@router.put("/{portfolio_id}/positions", response_model=list[PositionResponse])
+def replace_positions(portfolio_id: str, body: PositionsReplaceRequest, user: Dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Atomically replace all positions in a portfolio."""
+    p = db.query(Portfolio).filter(Portfolio.id == portfolio_id, Portfolio.user_id == user["id"]).first()
+    if not p:
+        raise HTTPException(404, detail={"code": "NOT_FOUND", "message": "Portfolio not found."})
+
+    # Validate all positions first
+    for pos_in in body.positions:
+        _validate_position(db, pos_in.security_id, pos_in.face_value_held)
+
+    # Delete existing, add new — single transaction
+    db.query(PortfolioPosition).filter(PortfolioPosition.portfolio_id == p.id).delete()
+    now = _now()
+    results = []
+    for pos_in in body.positions:
+        pos = PortfolioPosition(
+            portfolio_id=p.id, security_id=pos_in.security_id,
+            face_value_held=pos_in.face_value_held, position_type="long", added_at=now,
+        )
+        db.add(pos)
+        db.flush()
+        sec = db.query(Security).filter(Security.id == pos_in.security_id).first()
+        results.append(_position_response(pos, sec))
+
+    p.updated_at = now
+    db.commit()
+    return results
+
 
 @router.post("/{portfolio_id}/positions", status_code=201, response_model=PositionResponse)
 def add_position(portfolio_id: str, body: PositionCreate, user: Dict = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -165,6 +199,8 @@ def _get_positions(db: Session, portfolio_id: str):
 
 
 def _position_response(pos: PortfolioPosition, sec: Security | None):
+    if sec is None:
+        logger.warning(f"Orphaned position {pos.id}: security {pos.security_id} not found")
     return PositionResponse(
         id=pos.id, security_id=pos.security_id,
         isin=sec.isin if sec else "UNKNOWN",

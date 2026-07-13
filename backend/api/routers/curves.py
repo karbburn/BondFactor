@@ -80,12 +80,13 @@ def get_key_rate_tenors(db: Session = Depends(get_db)):
             TenorItem(label="30Y", years=30.0),
             TenorItem(label="40Y", years=40.0)
         ]
+        from datetime import date as _date
         return KeyRateTenorResponse(
-            effective_date=date(2026, 7, 1),
+            effective_date=_date.today(),
             tenors=default_tenors
         )
         
-    effective_date = tenors[0].effective_date if tenors else date(2026, 7, 1)
+    effective_date = tenors[0].effective_date if tenors else date.today()
     return KeyRateTenorResponse(
         effective_date=effective_date,
         tenors=[TenorItem(label=t.tenor_label, years=float(t.tenor_years)) for t in tenors]
@@ -108,9 +109,13 @@ def get_archived_dates(db: Session = Depends(get_db)):
     )
     result = []
     for curve_date, model_type, validation_status in rows:
+        cal_id = db.query(CurveCalibration.id).filter(
+            CurveCalibration.curve_date == curve_date, CurveCalibration.is_active == True
+        ).scalar()
         count = db.query(ReferenceZeroCurve).filter(
-            ReferenceZeroCurve.curve_date == curve_date
-        ).count()
+            ReferenceZeroCurve.curve_date == curve_date,
+            ReferenceZeroCurve.calibration_id == cal_id,
+        ).count() if cal_id else 0
         result.append(ArchivedDateItem(
             curve_date=curve_date,
             model_type=model_type,
@@ -160,14 +165,16 @@ def get_zero_curve_by_date(date_val: date, db: Session = Depends(get_db)):
 def format_curve_response(calibration: CurveCalibration) -> CurveResponse:
     parameters = None
     if calibration.model_type == "nss":
-        parameters = NSSParametersSchema(
-            beta0=float(calibration.beta0),
-            beta1=float(calibration.beta1),
-            beta2=float(calibration.beta2),
-            beta3=float(calibration.beta3),
-            tau1=float(calibration.tau1),
-            tau2=float(calibration.tau2)
-        )
+        beta_fields = ["beta0", "beta1", "beta2", "beta3", "tau1", "tau2"]
+        if all(getattr(calibration, f) is not None for f in beta_fields):
+            parameters = NSSParametersSchema(
+                beta0=float(calibration.beta0),
+                beta1=float(calibration.beta1),
+                beta2=float(calibration.beta2),
+                beta3=float(calibration.beta3),
+                tau1=float(calibration.tau1),
+                tau2=float(calibration.tau2)
+            )
         
     diagnostics = CurveDiagnostics(
         optimizer_converged=calibration.optimizer_converged,

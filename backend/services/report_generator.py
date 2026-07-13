@@ -108,7 +108,6 @@ def generate_report(report_id: str):
     db = SessionLocal()
 
     try:
-        # ponytail: clean up stale "processing" reports older than 5 minutes
         from datetime import timedelta
         stale_cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
         stale = db.query(ReportGeneration).filter(
@@ -222,101 +221,245 @@ def generate_report(report_id: str):
 def _render_pdf(path, portfolio_name, curve_date, scenario_results, base_zc_data):
     from fpdf import FPDF
 
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    C_BG = (10, 10, 15)
+    C_SURFACE = (17, 17, 25)
+    C_ELEVATED = (26, 27, 34)
+    C_ACCENT = (242, 169, 0)
+    C_TEXT = (232, 230, 225)
+    C_DIM = (136, 136, 136)
+    C_BORDER = (51, 51, 64)
+    C_POS = (45, 155, 117)
+    C_NEG = (196, 85, 58)
+    SITE_URL = "https://bondfactor.vercel.app"
+    LINKEDIN_URL = "https://linkedin.com/in/sourabh-pradhan07/"
 
-    # Title page
-    pdf.add_page()
-    pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 12, "BondFactor Risk Report", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", "", 11)
-    pdf.cell(0, 8, f"Portfolio: {portfolio_name}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 8, f"Curve Date: {curve_date}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 8, f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 8, f"Scenarios: {len(scenario_results)}", new_x="LMARGIN", new_y="NEXT")
+    class StyledPDF(FPDF):
+        def header(self):
+            if self.page_no() == 1:
+                return
+            self.set_font("Helvetica", "B", 9)
+            self.set_text_color(*C_ACCENT)
+            self.cell(0, 8, "BondFactor", new_x="LMARGIN", new_y="NEXT", link=SITE_URL)
+            self.set_draw_color(*C_ACCENT)
+            self.set_line_width(0.5)
+            self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
+            self.ln(4)
 
-    for sc_idx, sc in enumerate(scenario_results):
-        pdf.add_page()
+        def footer(self):
+            self.set_y(-15)
+            self.set_draw_color(*C_BORDER)
+            self.set_line_width(0.25)
+            self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
+            self.ln(3)
+            half = (self.w - self.l_margin - self.r_margin) / 2
+            self.set_font("Helvetica", "", 6.5)
+            self.set_text_color(*C_DIM)
+            self.cell(half, 5, "Made by Sourabh", link=LINKEDIN_URL)
+            self.cell(half, 5, f"Page {self.page_no()}/{{nb}}", align="R", new_x="LMARGIN", new_y="NEXT")
+            self.cell(half, 5, f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
+            self.cell(half, 5, "bondfactor.vercel.app", align="R", link=SITE_URL, new_x="LMARGIN", new_y="NEXT")
+
+    pdf = StyledPDF()
+    pdf.alias_nb_pages()
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.set_margins(left=15, top=20, right=15)
+    W = pdf.w - pdf.l_margin - pdf.r_margin  # content width
+
+    # ── helpers ──────────────────────────────────────────────────────────
+    def _color(val):
+        return C_POS if val > 0 else C_NEG if val < 0 else C_TEXT
+
+    def _section(title):
         pdf.set_font("Helvetica", "B", 13)
-        pdf.cell(0, 10, f"Scenario: {sc['name']}", new_x="LMARGIN", new_y="NEXT")
-
-        # Scenario parameters
-        pdf.set_font("Helvetica", "", 9)
-        s = sc["shocks"]
-        pdf.cell(0, 6, f"Parallel: {s['parallel_shift']:+.2f}%  Slope: {s['slope_shock']:+.2f}%  "
-                        f"Curvature1: {s['curvature1_shock']:+.2f}%  Curvature2: {s['curvature2_shock']:+.2f}%  "
-                        f"Twist: {s['twist_shock']:+.2f}%  Pivot: {s['twist_pivot']:.1f}Y",
-                 new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(*C_ACCENT)
+        pdf.cell(0, 8, title, new_x="LMARGIN", new_y="NEXT")
+        pdf.set_draw_color(*C_BORDER)
+        pdf.set_line_width(0.5)
+        pdf.line(pdf.l_margin, pdf.get_y(), pdf.l_margin + 80, pdf.get_y())
         pdf.ln(4)
 
-        # Risk summary
-        agg = sc["summary"]
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(0, 7, "Portfolio Risk Summary", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("Helvetica", "", 9)
-        for label, val, fmt in [
-            ("Total Base Dirty Value", agg["total_base_dirty"], "Rs. {:,.2f}"),
-            ("Total Base Clean Value", agg["total_base_clean"], "Rs. {:,.2f}"),
-            ("Total Shocked Dirty Value", agg["total_shocked_dirty"], "Rs. {:,.2f}"),
-            ("Scenario P&L", agg["total_pnl"], "Rs. {:+,.2f}"),
-            ("Modified Duration", agg["port_mod_dur"], "{:.4f} Y"),
-            ("Total DV01", agg["total_dv01"], "Rs. {:,.2f}"),
-            ("Convexity", agg["port_convexity"], "{:.4f}"),
-        ]:
-            pdf.cell(80, 6, label + ":")
-            pdf.cell(0, 6, fmt.format(val), new_x="LMARGIN", new_y="NEXT")
-        pdf.ln(3)
-
-        # Zero curve table
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(0, 7, "Zero Curve (Base)", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("Helvetica", "B", 8)
-        pdf.cell(30, 5, "Tenor")
-        pdf.cell(30, 5, "Zero Rate (%)")
-        pdf.cell(30, 5, "Discount Factor")
-        pdf.ln()
-        pdf.set_font("Helvetica", "", 8)
-        for pt in base_zc_data:
-            pdf.cell(30, 5, f"{pt['tenor']:.1f}Y")
-            pdf.cell(30, 5, f"{pt['rate']:.4f}")
-            pdf.cell(30, 5, f"{pt['df']:.6f}")
-            pdf.ln()
-        pdf.ln(3)
-
-        # Positions table
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(0, 7, "Portfolio Positions", new_x="LMARGIN", new_y="NEXT")
+    def _table_header(headers, widths):
         pdf.set_font("Helvetica", "B", 7)
-        headers = ["ISIN", "Face Value", "Clean", "Dirty", "YTM%", "ModDur", "DV01", "P&L"]
-        widths = [30, 22, 20, 20, 15, 15, 20, 22]
+        pdf.set_text_color(*C_ACCENT)
+        pdf.set_fill_color(*C_SURFACE)
         for h, w in zip(headers, widths):
-            pdf.cell(w, 5, h)
+            pdf.cell(w, 7, h, fill=True)
         pdf.ln()
-        pdf.set_font("Helvetica", "", 7)
-        for p in sc["positions"]:
-            pdf.cell(widths[0], 5, str(p["isin"])[:15])
-            pdf.cell(widths[1], 5, f"{p['face_value']:,.0f}")
-            pdf.cell(widths[2], 5, f"{p['base_clean']:.4f}")
-            pdf.cell(widths[3], 5, f"{p['base_dirty']:.4f}")
-            pdf.cell(widths[4], 5, f"{p['ytm']:.3f}")
-            pdf.cell(widths[5], 5, f"{p['mod_dur']:.3f}")
-            pdf.cell(widths[6], 5, f"{p['dv01']:,.0f}")
-            pdf.cell(widths[7], 5, f"{p['pnl']:+,.2f}")
-            pdf.ln()
+
+    def _table_row(values, widths, aligns, row_idx, fmts=None):
+        pdf.set_font("Helvetica", "", 7.5)
+        stripe = row_idx % 2 == 1
+        if stripe:
+            pdf.set_fill_color(*C_ELEVATED)
+        for i, (v, w, a) in enumerate(zip(values, widths, aligns)):
+            txt = fmts[i](v) if fmts else str(v)
+            if i == len(values) - 1 and isinstance(v, (int, float)):
+                pdf.set_text_color(*_color(v))
+            else:
+                pdf.set_text_color(*C_TEXT)
+            pdf.cell(w, 6, txt, align=a, fill=stripe)
+        pdf.ln()
+
+    # ── title page ───────────────────────────────────────────────────────
+    pdf.add_page()
+    pdf.set_fill_color(*C_BG)
+    pdf.rect(0, 0, pdf.w, pdf.h, "F")
+    pdf.ln(50)
+    pdf.set_font("Helvetica", "B", 28)
+    pdf.set_text_color(*C_ACCENT)
+    pdf.cell(0, 14, "BondFactor", align="C", new_x="LMARGIN", new_y="NEXT", link=SITE_URL)
+    pdf.set_draw_color(*C_ACCENT)
+    pdf.set_line_width(1)
+    pdf.line(pdf.w / 2 - 30, pdf.get_y(), pdf.w / 2 + 30, pdf.get_y())
+    pdf.ln(6)
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.set_text_color(*C_TEXT)
+    pdf.cell(0, 10, "RISK REPORT", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(18)
+
+    # info card
+    cx = pdf.l_margin + (W - 120) / 2
+    pdf.set_fill_color(*C_SURFACE)
+    pdf.set_draw_color(*C_BORDER)
+    pdf.set_line_width(0.5)
+    pdf.rect(cx, pdf.get_y(), 120, 32, "DF")
+    pdf.ln(5)
+    gen_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    for label, val in [("Portfolio", portfolio_name), ("Curve Date", str(curve_date)),
+                       ("Scenarios", str(len(scenario_results))), ("Generated", gen_time)]:
+        pdf.set_x(cx + 5)
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(*C_DIM)
+        pdf.cell(40, 7, label)
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_text_color(*C_TEXT)
+        pdf.cell(70, 7, val, new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(12)
+
+    pdf.set_font("Helvetica", "", 8)
+    pdf.set_text_color(*C_DIM)
+    pdf.cell(0, 5, "This report is generated by the BondFactor fixed-income risk engine.", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(2)
+    pdf.set_font("Helvetica", "", 8)
+    pdf.set_text_color(*C_ACCENT)
+    pdf.cell(0, 5, "bondfactor.vercel.app", align="C", link=SITE_URL, new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(2)
+    pdf.set_text_color(*C_DIM)
+    pdf.cell(0, 5, "Made by Sourabh", align="C", link=LINKEDIN_URL, new_x="LMARGIN", new_y="NEXT")
+
+    # ── scenario pages ───────────────────────────────────────────────────
+    for sc in scenario_results:
+        pdf.add_page()
+        pdf.set_font("Helvetica", "B", 13)
+        pdf.set_text_color(*C_ACCENT)
+        pdf.cell(0, 8, f"SCENARIO: {sc['name']}", new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(2)
+
+        # scenario params bar
+        s = sc["shocks"]
+        pdf.set_fill_color(*C_SURFACE)
+        pdf.set_draw_color(*C_BORDER)
+        pdf.set_line_width(0.5)
+        pdf.rect(pdf.l_margin, pdf.get_y(), W, 8, "DF")
+        pdf.ln(1)
+        params = [
+            (f"Parallel: {s['parallel_shift']:+.2f}%", 30),
+            (f"Slope: {s['slope_shock']:+.2f}%", 26),
+            (f"Curv1: {s['curvature1_shock']:+.2f}%", 26),
+            (f"Curv2: {s['curvature2_shock']:+.2f}%", 26),
+            (f"Twist: {s['twist_shock']:+.2f}%", 26),
+            (f"Pivot: {s['twist_pivot']:.1f}Y", 20),
+        ]
+        for txt, _ in params:
+            pdf.set_font("Helvetica", "", 7)
+            pdf.set_text_color(*C_DIM)
+            pdf.cell(26, 6, txt)
+        pdf.ln(10)
+
+        # risk summary cards
+        agg = sc["summary"]
+        _section("PORTFOLIO RISK SUMMARY")
+        metrics = [
+            ("TOTAL BASE DIRTY", f"Rs. {agg['total_base_dirty']:,.2f}"),
+            ("CLEAN VALUE", f"Rs. {agg['total_base_clean']:,.2f}"),
+            ("SHOCKED VALUE", f"Rs. {agg['total_shocked_dirty']:,.2f}"),
+            ("SCENARIO P&L", f"Rs. {agg['total_pnl']:+,.2f}"),
+            ("MOD. DURATION", f"{agg['port_mod_dur']:.4f} Y"),
+            ("TOTAL DV01", f"Rs. {agg['total_dv01']:,.2f}"),
+            ("CONVEXITY", f"{agg['port_convexity']:.4f}"),
+        ]
+        card_w = (W - 3) / 4  # 4 cards per row, 1mm gaps
+        card_h = 18
+        y0 = pdf.get_y()
+        for i, (label, val) in enumerate(metrics):
+            col = i % 4
+            row = i // 4
+            cx = pdf.l_margin + col * (card_w + 1)
+            cy = y0 + row * (card_h + 1)
+            # card bg
+            pdf.set_fill_color(*C_SURFACE)
+            pdf.set_draw_color(*C_BORDER)
+            pdf.set_line_width(0.3)
+            pdf.rect(cx, cy, card_w, card_h, "DF")
+            # accent stripe on first card
+            if i == 0:
+                pdf.set_fill_color(*C_ACCENT)
+                pdf.rect(cx, cy, 2, card_h, "F")
+            # label
+            pdf.set_xy(cx + 3, cy + 2)
+            pdf.set_font("Helvetica", "", 6.5)
+            pdf.set_text_color(*C_DIM)
+            pdf.cell(card_w - 4, 4, label)
+            # value
+            pdf.set_xy(cx + 3, cy + 8)
+            pdf.set_font("Helvetica", "B", 10)
+            if "P&L" in label:
+                pdf.set_text_color(*_color(agg["total_pnl"]))
+            else:
+                pdf.set_text_color(*C_TEXT)
+            pdf.cell(card_w - 4, 6, val)
+        pdf.set_y(y0 + 2 * (card_h + 1) + 5)
+
+        # zero curve table
+        _section("ZERO CURVE (BASE)")
+        zc_headers = ["Tenor", "Zero Rate (%)", "Discount Factor"]
+        zc_widths = [30, 30, 30]
+        _table_header(zc_headers, zc_widths)
+        for i, pt in enumerate(base_zc_data):
+            _table_row(
+                [pt["tenor"], pt["rate"], pt["df"]], zc_widths,
+                ["L", "R", "R"], i,
+                [lambda v: f"{v:.1f}Y", lambda v: f"{v:.4f}", lambda v: f"{v:.6f}"],
+            )
+        pdf.ln(4)
+
+        # positions table
+        _section("PORTFOLIO POSITIONS")
+        pos_headers = ["ISIN", "Face Value", "Clean", "Dirty", "YTM%", "ModDur", "DV01", "P&L"]
+        pos_widths = [30, 22, 20, 20, 15, 15, 20, 22]
+        pos_aligns = ["L", "R", "R", "R", "R", "R", "R", "R"]
+        _table_header(pos_headers, pos_widths)
+        for i, p in enumerate(sc["positions"]):
+            _table_row(
+                [p["isin"], p["face_value"], p["base_clean"], p["base_dirty"],
+                 p["ytm"], p["mod_dur"], p["dv01"], p["pnl"]],
+                pos_widths, pos_aligns, i,
+                [lambda v: str(v)[:15], lambda v: f"{v:,.0f}", lambda v: f"{v:.4f}",
+                 lambda v: f"{v:.4f}", lambda v: f"{v:.3f}", lambda v: f"{v:.3f}",
+                 lambda v: f"{v:,.0f}", lambda v: f"{v:+,.2f}"],
+            )
+        pdf.ln(4)
 
         # KRD table
-        pdf.ln(3)
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(0, 7, "Key Rate Durations", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("Helvetica", "B", 8)
-        tenor_labels = [f"{t}Y" if t >= 1 else f"{int(t*12)}M" for t in DEFAULT_KEY_TENORS]
-        for lbl in tenor_labels:
-            pdf.cell(15, 5, lbl)
-        pdf.ln()
-        pdf.set_font("Helvetica", "", 8)
-        for krd_val in agg["port_krd"]:
-            pdf.cell(15, 5, f"{krd_val:.3f}")
-        pdf.ln()
+        _section("KEY RATE DURATIONS")
+        tenor_labels = [f"{t}Y" if t >= 1 else f"{int(t * 12)}M" for t in DEFAULT_KEY_TENORS]
+        krd_w = W / len(tenor_labels)
+        _table_header(tenor_labels, [krd_w] * len(tenor_labels))
+        _table_row(
+            agg["port_krd"], [krd_w] * len(tenor_labels),
+            ["R"] * len(tenor_labels), 0,
+            [lambda v: f"{v:.3f}"] * len(tenor_labels),
+        )
 
     pdf.output(path)
 

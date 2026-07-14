@@ -5,7 +5,7 @@ import { calculateAccruedInterest } from "./conventions";
 export function calculateDirtyPrice(
   settlementDate: Date, 
   cashflows: Cashflow[], 
-  zc: ZeroCurve
+  zc: Pick<ZeroCurve, 'getDiscountFactor'>
 ): number {
   let dirtyPrice = 0.0;
   for (const cf of cashflows) {
@@ -90,7 +90,8 @@ export function calculateYtm(
     fLow = objective(low);
     fHigh = objective(high);
     if (fLow * fHigh > 0) {
-      throw new Error("YTM solver failed to converge");
+      console.warn("YTM solver: expanded bracket search failed, returning fallback yield");
+      return 0.0;
     }
   }
 

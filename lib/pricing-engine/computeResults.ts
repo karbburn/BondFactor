@@ -111,7 +111,9 @@ export function computePortfolioResults(
     };
   }
 
-  const sd = getSettlementDate(new Date(curveDate));
+  // Parse as local noon to avoid timezone day-shift from UTC-midnight string parsing
+  const [y, m, d] = curveDate.split('-').map(Number);
+  const sd = getSettlementDate(new Date(y, m - 1, d, 12, 0, 0));
 
   // Pre-bootstrap the 8 factor-perturbed curves once at the portfolio level
   const h = 0.01;

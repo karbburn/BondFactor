@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { SecurityItem, useCurve } from './CurveContext';
 import { apiFetch } from '../supabase/api';
 
@@ -44,12 +44,11 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [savedPortfolios, setSavedPortfolios] = useState<SavedPortfolio[]>([]);
   const [activePortfolioId, setActivePortfolioId] = useState<string | null>(null);
   const [activePortfolioName, setActivePortfolioName] = useState<string>("Untitled Portfolio");
-  const [compareIds, setCompareIds] = useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      try { return JSON.parse(localStorage.getItem('compareIds') || '[]'); } catch { return []; }
-    }
-    return [];
-  });
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    try { setCompareIds(JSON.parse(localStorage.getItem('compareIds') || '[]')); } catch {}
+  }, []);
   const { securities } = useCurve();
 
   const toggleCompare = useCallback((id: string) => {

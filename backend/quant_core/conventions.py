@@ -15,13 +15,13 @@ def get_settlement_date(trade_date: date) -> date:
     # Upgrade path: Integrate a holiday library or load holiday dates from DB when scaling.
     """
     weekday = trade_date.weekday()  # 0 = Monday, 6 = Sunday
-    if weekday == 4:    # Friday -> Monday
+    if weekday == 4:    # Friday -> Monday (skip weekend)
         return trade_date + timedelta(days=3)
-    elif weekday == 5:    # Saturday -> Monday (T+1)
+    elif weekday == 5:  # Saturday -> Monday (skip weekend)
         return trade_date + timedelta(days=2)
-    elif weekday == 6:    # Sunday -> Tuesday (T+1)
+    elif weekday == 6:  # Sunday -> Tuesday (skip weekend + Monday)
         return trade_date + timedelta(days=2)
-    else:               # Monday-Thursday -> Next Day
+    else:               # Monday-Thursday -> next business day
         return trade_date + timedelta(days=1)
 
 def calculate_accrued_interest(

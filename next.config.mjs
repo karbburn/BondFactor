@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://bondfactor-api.onrender.com';
+
 const nextConfig = {
   async headers() {
     return [
@@ -13,7 +15,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data:",
               "font-src 'self'",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://bondfactor-api.onrender.com",
+              `connect-src 'self' ${apiBase} https://*.supabase.co wss://*.supabase.co`,
               "frame-ancestors 'self'",
             ].join("; "),
           },

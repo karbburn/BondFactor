@@ -77,7 +77,7 @@ export default function SavedPortfoliosPage() {
                   <td className="font-mono" style={{ fontSize: '11px' }}>{new Date(sp.updated_at).toLocaleDateString()}</td>
                   <td style={{ textAlign: 'center' }}>
                     <button className="btn font-mono" style={{ fontSize: '10px', padding: '2px 8px', marginRight: '6px' }}
-                      onClick={() => { loadPortfolio(sp.id); window.location.href = '/portfolio'; }}>
+                      onClick={async () => { await loadPortfolio(sp.id); router.push('/portfolio'); }}>
                       LOAD
                     </button>
                     <button className="btn btn-danger font-mono" style={{ fontSize: '10px', padding: '2px 8px' }}

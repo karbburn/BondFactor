@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { SecurityItem, useCurve } from './CurveContext';
 import { apiFetch } from '../supabase/api';
 
@@ -50,6 +50,8 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     try { setCompareIds(JSON.parse(localStorage.getItem('compareIds') || '[]')); } catch {}
   }, []);
   const { securities } = useCurve();
+  const securitiesRef = useRef(securities);
+  useEffect(() => { securitiesRef.current = securities; }, [securities]);
 
   const toggleCompare = useCallback((id: string) => {
     setCompareIds(prev => {
@@ -122,26 +124,16 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
 
     const portfolioId = result.id;
 
-    // Atomic position replacement on update
-    if (isUpdate) {
-      await apiFetch(`/api/v1/portfolios/${portfolioId}/positions`, {
-        method: "PUT",
-        body: JSON.stringify({
-          positions: portfolio.map(pos => ({
-            security_id: pos.security.id,
-            face_value_held: pos.faceValue,
-          })),
-        }),
-      });
-    } else {
-      // Add positions for new portfolio
-      await Promise.all(portfolio.map((pos) =>
-        apiFetch(`/api/v1/portfolios/${portfolioId}/positions`, {
-          method: "POST",
-          body: JSON.stringify({ security_id: pos.security.id, face_value_held: pos.faceValue }),
-        })
-      ));
-    }
+    // Atomic position replacement — PUT replaces all positions in one request
+    await apiFetch(`/api/v1/portfolios/${portfolioId}/positions`, {
+      method: "PUT",
+      body: JSON.stringify({
+        positions: portfolio.map(pos => ({
+          security_id: pos.security.id,
+          face_value_held: pos.faceValue,
+        })),
+      }),
+    });
 
     setActivePortfolioId(portfolioId);
     await fetchSavedPortfolios();
@@ -153,10 +145,12 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     setActivePortfolioId(data.id);
     setActivePortfolioName(data.portfolio_name);
 
+    // Use ref to always read latest securities, avoiding stale closure on initial load
+    const currentSecurities = securitiesRef.current;
     const positions: PositionItem[] = [];
     let unresolved = 0;
     for (const pos of data.positions) {
-      const sec = securities.find(s => s.id === pos.security_id || s.isin === pos.isin);
+      const sec = currentSecurities.find(s => s.id === pos.security_id || s.isin === pos.isin);
       if (sec) {
         positions.push({ security: sec, faceValue: pos.face_value_held });
       } else {
@@ -167,7 +161,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       console.warn(`${unresolved} position(s) could not be matched to active securities`);
     }
     setPortfolioState(positions);
-  }, [securities]);
+  }, []);
 
   const deleteSavedPortfolio = useCallback(async (portfolioId: string) => {
     await apiFetch(`/api/v1/portfolios/${portfolioId}`, { method: "DELETE" });

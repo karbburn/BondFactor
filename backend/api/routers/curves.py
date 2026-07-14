@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from datetime import date
 from typing import List, Optional
 
@@ -100,29 +101,29 @@ def get_archived_dates(db: Session = Depends(get_db)):
             CurveCalibration.curve_date,
             CurveCalibration.model_type,
             CurveCalibration.validation_status,
+            CurveCalibration.id,
+            func.count(ReferenceZeroCurve.id).label('point_count'),
         )
-        .join(ReferenceZeroCurve, ReferenceZeroCurve.calibration_id == CurveCalibration.id)
+        .outerjoin(ReferenceZeroCurve, ReferenceZeroCurve.calibration_id == CurveCalibration.id)
         .filter(CurveCalibration.is_active == True)
-        .distinct()
+        .group_by(
+            CurveCalibration.curve_date,
+            CurveCalibration.model_type,
+            CurveCalibration.validation_status,
+            CurveCalibration.id,
+        )
         .order_by(CurveCalibration.curve_date.desc())
         .all()
     )
-    result = []
-    for curve_date, model_type, validation_status in rows:
-        cal_id = db.query(CurveCalibration.id).filter(
-            CurveCalibration.curve_date == curve_date, CurveCalibration.is_active == True
-        ).scalar()
-        count = db.query(ReferenceZeroCurve).filter(
-            ReferenceZeroCurve.curve_date == curve_date,
-            ReferenceZeroCurve.calibration_id == cal_id,
-        ).count() if cal_id else 0
-        result.append(ArchivedDateItem(
-            curve_date=curve_date,
-            model_type=model_type,
-            validation_status=validation_status,
-            point_count=count,
-        ))
-    return result
+    return [
+        ArchivedDateItem(
+            curve_date=row.curve_date,
+            model_type=row.model_type,
+            validation_status=row.validation_status,
+            point_count=row.point_count,
+        )
+        for row in rows
+    ]
 
 @router.get("/curves/historical-calibration", response_model=HistoricalCalibrationResponse)
 def get_historical_calibration(db: Session = Depends(get_db)):

@@ -74,4 +74,10 @@ async def get_current_user(authorization: str = Header(None)) -> Dict:
     # Cache successful result
     _token_cache[token] = (user_data, now + _CACHE_TTL)
 
+    # Prune expired entries when cache grows large
+    if len(_token_cache) > 100:
+        expired = [k for k, (_, exp) in _token_cache.items() if exp <= now]
+        for k in expired:
+            del _token_cache[k]
+
     return user_data

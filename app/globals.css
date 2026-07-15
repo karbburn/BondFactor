@@ -894,12 +894,15 @@ body {
 
 /* --- Responsive --- */
 
+.portfolio-left-col { grid-column: span 2; }
+
 @media (max-width: 1200px) {
   .container { max-width: 100%; }
 }
 
 @media (max-width: 768px) {
   .container { padding: 1rem; }
+  .portfolio-left-col { grid-column: span 1; }
 
   .metric-grid {
     grid-template-columns: repeat(3, 1fr);

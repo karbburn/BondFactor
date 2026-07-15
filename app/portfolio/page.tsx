@@ -57,9 +57,12 @@ export default function PortfolioBuilder() {
     }
   };
 
-  const handleDeleteSavedPortfolioClick = (id: string, name: string) => {
-    if (confirm(`Are you sure you want to permanently delete the saved portfolio "${name}"?`)) {
-      deleteSavedPortfolio(id);
+  const handleDeleteSavedPortfolioClick = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to permanently delete the saved portfolio "${name}"?`)) return;
+    try {
+      await deleteSavedPortfolio(id);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'Failed to delete portfolio.');
     }
   };
 
@@ -87,7 +90,7 @@ export default function PortfolioBuilder() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 350px), 1fr))', gap: '1.5rem', alignItems: 'start' }}>
         
         {/* Left Column: Current Portfolio & Actions */}
-        <div style={{ gridColumn: 'span 2' }}>
+        <div className="portfolio-left-col">
           
           {/* Portfolio Metrics Panel */}
           <div className="metric-grid">
@@ -308,7 +311,10 @@ export default function PortfolioBuilder() {
                           />
                           <button className="font-mono" style={{ fontSize: '10px', color: sp.id === activePortfolioId ? 'var(--accent)' : 'var(--text-primary)',
                             background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-                            onClick={() => loadPortfolio(sp.id)}>
+                            onClick={async () => {
+                              try { await loadPortfolio(sp.id); }
+                              catch (e: unknown) { alert(e instanceof Error ? e.message : 'Failed to load portfolio.'); }
+                            }}>
                             {sp.portfolio_name} <span style={{ color: 'var(--text-secondary)' }}>({sp.position_count})</span>
                           </button>
                         </label>

@@ -8,11 +8,13 @@ export function getSettlementDate(tradeDate: Date): Date {
   const date = new Date(tradeDate.getTime());
   const day = date.getDay(); // 0 = Sunday, 6 = Saturday
   
-  if (day === 5) { // Friday -> Monday (+3 days)
+  if (day === 5) { // Friday trade -> settles Monday (T+3)
     date.setDate(date.getDate() + 3);
-  } else if (day === 6 || day === 0) { // Saturday/Sunday -> Tuesday (+2 days)
+  } else if (day === 6) { // Saturday trade -> settles Monday (T+2)
     date.setDate(date.getDate() + 2);
-  } else { // Monday-Thursday -> Next Day (+1 day)
+  } else if (day === 0) { // Sunday trade -> settles Tuesday (T+2)
+    date.setDate(date.getDate() + 2);
+  } else { // Mon-Thu trade -> settles next business day (T+1)
     date.setDate(date.getDate() + 1);
   }
   return date;

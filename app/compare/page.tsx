@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useCurve } from '../../lib/state/CurveContext';
 import { usePortfolio, PositionItem } from '../../lib/state/PortfolioContext';
 import { useScenario } from '../../lib/state/ScenarioContext';
@@ -32,8 +32,11 @@ export default function ComparePage() {
     return compareIds.filter(id => !loaded.some(l => l.id === id));
   }, [compareIds, loaded]);
 
+  const fetchedRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
-    if (toFetch.length === 0 || securities.length === 0) return;
+    const pending = toFetch.filter(id => !fetchedRef.current.has(id));
+    if (pending.length === 0 || securities.length === 0) return;
     let cancelled = false;
     setFetching(true);
     setGlobalError(null);
@@ -44,7 +47,8 @@ export default function ComparePage() {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         
-        const results = await Promise.all(toFetch.map(async (id) => {
+        const results = await Promise.all(pending.map(async (id) => {
+          fetchedRef.current.add(id);
           try {
             const headers: Record<string, string> = { 'Content-Type': 'application/json' };
             if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -88,7 +92,7 @@ export default function ComparePage() {
   const baseParams = useMemo(() => {
     if (curve?.parameters) return curve.parameters;
     return FALLBACK_NSS_PARAMS;
-  }, [curve]);
+  }, [curve?.parameters]);
 
   const shocks: ScenarioShocks = useMemo(() => ({
     parallel_shift: parallelShift,
@@ -103,7 +107,14 @@ export default function ComparePage() {
   const shockedZc = useMemo(() => buildZeroCurve(applyShocks(baseParams, shocks)), [baseParams, shocks]);
 
   useEffect(() => {
-    setLoaded(prev => prev.filter(l => compareIds.includes(l.id)));
+    setLoaded(prev => {
+      const filtered = prev.filter(l => compareIds.includes(l.id));
+      // Clean up fetchedRef for IDs no longer in compareIds
+      fetchedRef.current.forEach(id => {
+        if (!compareIds.includes(id)) fetchedRef.current.delete(id);
+      });
+      return filtered;
+    });
   }, [compareIds]);
 
   if (curveLoading) {
@@ -184,7 +195,7 @@ export default function ComparePage() {
                           {summary.totalPnl >= 0 ? '+' : ''}{formatCurrency(summary.totalPnl)}
                         </td>
                         <td className="num">{summary.portfolioModDur.toFixed(3)} Y</td>
-                        <td className="num">Rs. {Math.round(summary.portfolioDv01).toLocaleString()}</td>
+                        <td className="num">\u20B9 {Math.round(summary.portfolioDv01).toLocaleString()}</td>
                         <td className="num">{summary.portfolioConvexity.toFixed(2)}</td>
                       </tr>
                     );

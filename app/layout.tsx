@@ -10,6 +10,7 @@ import { ScenarioProvider } from "../lib/state/ScenarioContext";
 import { ResultsProvider } from "../lib/state/ResultsContext";
 import { AuthProvider } from "../lib/state/AuthContext";
 import Navbar from "../lib/components/Navbar";
+import ErrorBoundary from "../lib/components/ErrorBoundary";
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
@@ -41,6 +42,7 @@ export default function RootLayout({
             <PortfolioProvider>
               <ScenarioProvider>
                 <ResultsProvider>
+                <ErrorBoundary>
                   <a href="#main-content" className="skip-link">Skip to content</a>
                   <div className="layout-wrapper">
                     <Navbar />
@@ -59,6 +61,7 @@ export default function RootLayout({
                       </div>
                     </footer>
                   </div>
+                </ErrorBoundary>
                 </ResultsProvider>
               </ScenarioProvider>
             </PortfolioProvider>

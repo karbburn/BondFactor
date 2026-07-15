@@ -8,8 +8,6 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error?: string; message?: string }>;
-  signUp: (email: string, password: string) => Promise<{ error?: string; message?: string }>;
   signInWithGoogle: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
 }
@@ -38,21 +36,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await getSupabase().auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message };
-    return {};
-  }, []);
-
-  const signUp = useCallback(async (email: string, password: string) => {
-    const { error, data } = await getSupabase().auth.signUp({ email, password });
-    if (error) return { error: error.message };
-    if (data.user && !data.session) {
-      return { message: 'Check your email for a confirmation link.' };
-    }
-    return {};
-  }, []);
-
   const signInWithGoogle = useCallback(async () => {
     const { error } = await getSupabase().auth.signInWithOAuth({
       provider: 'google',
@@ -69,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );

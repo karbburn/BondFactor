@@ -90,7 +90,7 @@ export function calculateYtm(
     fLow = objective(low);
     fHigh = objective(high);
     if (fLow * fHigh > 0) {
-      return NaN; // ponytail: signal failure, callers must handle
+      return NaN;
     }
   }
 

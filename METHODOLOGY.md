@@ -14,9 +14,9 @@ BondFactor ingests yield data from two sources, each providing a different type 
 
 **FBIL (Financial Benchmarks India Ltd.)** publishes a **daily benchmark par yield curve** for Indian Government Securities — a sparse set of yields at fixed benchmark tenors (e.g., 91-day, 1Y, 2Y, 5Y, 10Y, and other standard points), not a dense continuum and not zero-coupon rates. This is the primary data source, processed via manual CSV ingestion.
 
-**NSE (National Stock Exchange)** publishes a **Zero Coupon Yield Curve (ZCYC)** derived from WDM segment trading data, estimated using Nelson-Siegel parametric fitting. These are zero-coupon rates, not par yields. NSE ZCYC is fetched programmatically via the NSE reports API and serves as an automated daily source when available, falling back to manual CSV when NSE is unreachable.
+**NSE (National Stock Exchange)** publishes daily **G-Sec trade data** from the WDM segment — individual bond trades with weighted average yields and traded volumes. These are par yields for specific GOI bonds and T-bills, not zero-coupon rates. NSE WDM data is fetched programmatically via the NSE reports API and serves as an automated daily source when available, falling back to manual CSV when NSE is unreachable.
 
-The distinction between par yields (FBIL) and zero-coupon rates (NSE) is fundamental: it determines which curve construction path the pipeline follows (Section 3.6). There is no liquid, actively quoted zero-coupon G-Sec market in India — any zero curve used by BondFactor is necessarily *derived*, not directly observed, whether from FBIL's par yields via bootstrap or from NSE's parametric estimation.
+The distinction between par yields (FBIL and NSE WDM) and the curve construction pipeline is straightforward: both sources provide par yields, so both follow the same NSS fit → bootstrap workflow (Section 3.2). There is no liquid, actively quoted zero-coupon G-Sec market in India — any zero curve used by BondFactor is necessarily *derived*, not directly observed, via bootstrap from par yields.
 
 ## 3. Curve Construction: Comparative Evaluation of Approaches
 
@@ -62,13 +62,13 @@ Five distinct workflows for getting from observed market data to a usable discou
 
 **Advantages:** If genuine zero-coupon data existed, this would be the most direct route, with no bootstrap-induced propagation of fitting error into discounting.
 
-**Limitations:** Forcing this approach onto par-yield data would require a mathematically unsound shortcut precisely at the maturities where it matters most. However, when zero-coupon data is available directly (as from NSE ZCYC), these limitations do not apply — the data is genuinely zero-coupon, not approximated.
+**Limitations:** Forcing this approach onto par-yield data would require a mathematically unsound shortcut precisely at the maturities where it matters most. However, when zero-coupon data were available directly (as from the former NSE ZCYC, now discontinued), these limitations did not apply — the data was genuinely zero-coupon, not approximated.
 
 **Computational complexity:** Comparable to NSS fitting otherwise, but the required pre-processing step to fabricate zero-rate inputs is itself a source of unquantified error.
 
 **Typical industry use case:** Markets with a genuinely traded zero-coupon instrument set (e.g., US Treasury STRIPS) or effectively zero-rate-based curves by construction (certain OIS-discounted swap curves).
 
-**Applicability to BondFactor:** Partially adopted. When NSE ZCYC provides genuine zero-coupon rates, BondFactor skips the NSS+bootstrap pipeline entirely and builds the zero curve directly from the observed zero rates via cubic spline interpolation (Section 3.6). NSS is not used for zero-coupon data because it was designed for par yield curves. This is a separate, parallel path — FBIL par yields still follow the fit-then-bootstrap workflow (Section 3.2).
+**Applicability to BondFactor:** Partially adopted in the past. When NSE ZCYC (now discontinued) provided genuine zero-coupon rates, BondFactor skipped the NSS+bootstrap pipeline entirely and built the zero curve directly from the observed zero rates via cubic spline interpolation (Section 3.6). NSS is not used for zero-coupon data because it was designed for par yield curves. With NSE WDM trade data now providing par yields instead, this separate path is no longer needed — all data follows the fit-then-bootstrap workflow.
 
 ### 3.4 Approach 4 — Joint Estimation
 
@@ -107,12 +107,12 @@ Five distinct workflows for getting from observed market data to a usable discou
 | Approach | Input requirement | Key strength | Key weakness for BondFactor | Selected? |
 |---|---|---|---|---|
 | Bootstrap → Fit | Dense liquid points | Ties raw curve to actual instruments | Sparse FBIL grid forces hidden interpolation before bootstrap even starts | No |
-| **Fit → Bootstrap** | **Sparse par yields (matches FBIL)** | **Interpretable factors; matches sparse par-yield input; cheap enough for client-side reimplementation** | **Fit error propagates downstream (mitigated by diagnostics)** | **Yes (FBIL)** |
-| Direct zero-curve fitting | Genuine zero-rate data | Most direct, if data existed | No liquid zero-coupon G-Sec market exists in India; **used for NSE ZCYC data** | **Yes (NSE)** |
+| **Fit → Bootstrap** | **Sparse par yields (matches FBIL and NSE WDM)** | **Interpretable factors; matches par-yield input; cheap enough for client-side reimplementation** | **Fit error propagates downstream (mitigated by diagnostics)** | **Yes (FBIL + NSE WDM)** |
+| Direct zero-curve fitting | Genuine zero-rate data | Most direct, if data existed | No liquid zero-coupon G-Sec market exists in India; NSE ZCYC (former source) is discontinued | No |
 | Joint estimation | Par yields, nested optimization | No separate bootstrap error stage | High computational cost; hard to diagnose; conflicts with modularity requirement | No |
 | Discount-factor-space (Smith-Wilson) | Liquid points + assumed UFR | Excellent, stable long-end extrapolation | UFR is externally assumed, not market-derived; parameters aren't factor-shock-friendly | No |
 
-**Conclusion:** BondFactor uses a dual-path pipeline. FBIL par yields follow fit-first-then-bootstrap (Approach 2), which best matches sparse par-yield data and produces interpretable factors for the scenario engine. NSE ZCYC zero-coupon rates follow direct curve fitting (Approach 3), using cubic spline interpolation to build the zero curve without bootstrap, since the data is already in zero-coupon form. The `yield_type` field in the database routes between these two paths at calibration time.
+**Conclusion:** BondFactor uses a single-path pipeline. Both FBIL par yields and NSE WDM trade yields follow fit-first-then-bootstrap (Approach 2), which best matches par-yield data and produces interpretable factors for the scenario engine. The `yield_type` field in the database stores the curve type, and all calibrations follow the same NSS → bootstrap workflow.
 
 ## 4. Curve Fitting Models
 
@@ -126,9 +126,7 @@ NSS is fit to the observed FBIL par yields by nonlinear least squares, minimizin
 
 A piecewise cubic polynomial interpolation fit exactly through the observed data points. Used for two purposes:
 
-1. **Primary model for zero-coupon data (NSE ZCYC).** When the input is already zero-coupon rates, NSS is skipped entirely and cubic spline interpolates directly through the observed zero rates. This is the appropriate model because NSS was designed for par yield curves — fitting it to zero-coupon rates would degrade accuracy at the long end without adding value.
-
-2. **Fallback for par yield data (FBIL).** When NSS calibration fails validation (Section 6), cubic spline takes over automatically for that trading day's curve.
+1. **Fallback for par yield data (FBIL and NSE WDM).** When NSS calibration fails validation (Section 6), cubic spline takes over automatically for that trading day's curve.
 
 Cubic spline is not used as the primary model for par yield data because it passes exactly through noisy data points (no smoothing), has no interpretable parameters for the scenario engine, and can produce unstable extrapolation beyond the longest observed tenor — all of which make it a poorer fit for BondFactor's FBIL pipeline than NSS, despite being simpler to compute.
 
@@ -146,9 +144,9 @@ The pipeline routes between two paths based on the data source's `yield_type`:
 | Source | yield_type | Curve model | Zero curve construction |
 |--------|-----------|-------------|------------------------|
 | FBIL (manual CSV) | `par` | NSS (primary), cubic spline (fallback) | Bootstrap par → zero |
-| NSE ZCYC | `zero_coupon` | Cubic spline (primary) | Direct build, no bootstrap |
+| NSE WDM (automated) | `par` | NSS (primary), cubic spline (fallback) | Bootstrap par → zero |
 
-The `yield_type` is stored in the `curve_calibrations` database table and propagates through to report generation, scenario shocks, and risk decomposition. When `yield_type == "zero_coupon"`, the NSS calibration step is skipped entirely — NSS is designed for par yield curves and fitting it to zero-coupon rates would degrade accuracy without adding value.
+The `yield_type` is stored in the `curve_calibrations` database table and propagates through to report generation, scenario shocks, and risk decomposition. Both FBIL and NSE WDM sources use `yield_type == "par"` and follow the same NSS → bootstrap pipeline.
 
 ## 6. Calibration Validation, Diagnostics, and Fallback
 

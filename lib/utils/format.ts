@@ -1,5 +1,5 @@
 export const formatCurrency = (val: number) => {
-  if (!isFinite(val)) return '₹ 0'; // ponytail: NaN/Infinity guard
+  if (!isFinite(val)) return '₹ 0';
   if (val === 0) return '₹ 0';
   const abs = Math.abs(val);
   const sign = val < 0 ? '-' : '';

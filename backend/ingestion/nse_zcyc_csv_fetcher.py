@@ -17,7 +17,7 @@ from collections import defaultdict
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
-# ponytail: tenor mapping is approximate — NSS calibration smooths it out
+# Tenor mapping is approximate — NSS calibration smooths it out
 TENOR_MAP = {
     "91D": (0.25, "91D"), "182D": (0.50, "182D"), "364D": (1.00, "364D"),
 }

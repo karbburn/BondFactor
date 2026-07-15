@@ -40,7 +40,7 @@ def archive_zero_curve(db: Session, curve_date) -> bool:
     source = rows[0].source
     yield_type = "zero_coupon" if source == "nse_zcyc" else "par"
 
-    # ponytail: zero-coupon data skips NSS (designed for par curves), goes straight to spline
+    # Zero-coupon data skips NSS (designed for par curves), goes straight to spline
     if yield_type == "zero_coupon":
         from quant_core.spline import CubicSplineCurve
         model_type = "cubic_spline"

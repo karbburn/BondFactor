@@ -44,7 +44,7 @@ All calculations use standard Indian G-Sec market conventions: semi-annual coupo
 │  Backend (FastAPI · Python 3.12 · Render)                        │
 │  ┌────────────┐  ┌───────────────┐  ┌────────────────────────┐  │
 │  │  Ingestion  │  │  Calibration  │  │  Portfolio CRUD       │  │
-│  │  NSE/FBIL   │  │  NSS + spline │  │  Auth + RLS           │  │
+│  │  NSE WDM/FBIL│  │  NSS + spline │  │  Auth + RLS           │  │
 │  └────────────┘  └───────────────┘  └────────────────────────┘  │
 └─────────────────────────────┬────────────────────────────────────┘
                               │
@@ -207,7 +207,7 @@ npx tsc --noEmit
 
 | Source | Type | Status | Notes |
 |--------|------|--------|-------|
-| **NSE ZCYC** | Zero-coupon yields | Automated | Programmatic fetch via NSE reports API. Cubic spline interpolation, no bootstrap. |
+| **NSE WDM** | G-Sec trade yields | Automated | Daily WDM trade data from NSE archives. Filters GOI bonds + T-bills, volume-weighted YTM. NSS fit → bootstrap. |
 | **FBIL** | Par yields | Primary | Daily benchmark par yield curves. Manual CSV ingestion. NSS fit → bootstrap. |
 | **Manual CSV** | Par yields | Guaranteed fallback | For when automated sources are unavailable |
 

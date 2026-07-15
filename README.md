@@ -179,7 +179,6 @@ BondFactor/
 │   ├── ingestion/                # Data fetch + validation
 │   ├── services/                 # Report generation
 │   └── tests/                    # pytest suite
-└── assets/                       # Design docs, methodology
 ```
 
 ---
@@ -232,7 +231,7 @@ Historical coverage: reliable FBIL par yield data starts from March 31, 2018 (wh
 |-------|--------|-------|
 | **Phase 1** | ✅ Complete | Core analytics engine — ingestion, curve fitting, pricing, risk, scenarios, KRD, TypeScript parity, golden reference validation, full frontend |
 | **Phase 2** | ✅ Complete | Platform features — auth, portfolio persistence, multi-portfolio management, historical replay, PDF/Excel reporting, saved scenarios |
-| **Phase 3** | 🔜 Indicative | Advanced analytics — historical scenario calibration, risk attribution, performance optimization, expanded visualization |
+| **Phase 3** | ✅ Complete | Advanced analytics — historical scenario calibration, risk attribution, performance optimization, expanded visualization |
 
 ---
 

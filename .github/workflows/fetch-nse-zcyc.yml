@@ -2,10 +2,9 @@ name: Fetch NSE Yield Data
 
 on:
   workflow_dispatch:
-    inputs:
-      date:
-        description: 'Target date (YYYY-MM-DD). Defaults to latest available.'
-        required: false
+
+permissions:
+  contents: write
 
 jobs:
   fetch-yields:
@@ -26,7 +25,7 @@ jobs:
         env:
           PYTHONPATH: backend
 
-      - name: Commit CSV
+      - name: Commit and push CSV
         if: steps.fetch.outcome == 'success'
         run: |
           CSV=$(ls -t backend/data/manual_yields_*.csv 2>/dev/null | head -1)

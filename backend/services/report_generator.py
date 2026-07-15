@@ -398,12 +398,12 @@ def _render_pdf(path, portfolio_name, curve_date, scenario_results, base_zc_data
         agg = sc["summary"]
         _section("PORTFOLIO RISK SUMMARY")
         metrics = [
-            ("TOTAL BASE DIRTY", f"₹ {agg['total_base_dirty']:,.2f}"),
-            ("CLEAN VALUE", f"₹ {agg['total_base_clean']:,.2f}"),
-            ("SHOCKED VALUE", f"₹ {agg['total_shocked_dirty']:,.2f}"),
-            ("SCENARIO P&L", f"₹ {agg['total_pnl']:+,.2f}"),
+            ("TOTAL BASE DIRTY", f"Rs. {agg['total_base_dirty']:,.2f}"),
+            ("CLEAN VALUE", f"Rs. {agg['total_base_clean']:,.2f}"),
+            ("SHOCKED VALUE", f"Rs. {agg['total_shocked_dirty']:,.2f}"),
+            ("SCENARIO P&L", f"Rs. {agg['total_pnl']:+,.2f}"),
             ("MOD. DURATION", f"{agg['port_mod_dur']:.4f} Y"),
-            ("TOTAL DV01", f"₹ {agg['total_dv01']:,.2f}"),
+            ("TOTAL DV01", f"Rs. {agg['total_dv01']:,.2f}"),
             ("CONVEXITY", f"{agg['port_convexity']:.4f}"),
         ]
         card_w = (W - 6) / 4
@@ -602,7 +602,7 @@ def _render_xlsx(path, portfolio_name, curve_date, scenario_results, base_zc_dat
 
         krd_chart = BarChart()
         krd_chart.title = f"KRD Profile — {sc['name']}"
-        krd_chart.y_axis.title = "Sensitivity (₹/bp)"
+        krd_chart.y_axis.title = "Sensitivity (Rs./bp)"
         krd_chart.width = 20
         krd_chart.height = 12
         krd_chart.style = 10

@@ -53,27 +53,17 @@ def fetch_wdm_yields(target_date: date) -> list[dict]:
 
     reports = resp.json()
 
-    # Ponytail: PreviousDay is always complete; CurrentDay is mid-session
     download_url = None
     target_ddmmyyyy = target_date.strftime("%d%m%Y")
-
-    # If target is today, use PreviousDay (complete data)
-    if target_date == date.today():
-        for report in reports.get("PreviousDay", []):
+    for day_key in ["CurrentDay", "PreviousDay"]:
+        for report in reports.get(day_key, []):
             if report.get("displayName", "").startswith("Daily Report"):
-                download_url = report["filePath"] + report["fileActlName"]
-                break
-    else:
-        # Specific past date — find matching report
-        for day_key in ["PreviousDay", "CurrentDay"]:
-            for report in reports.get(day_key, []):
-                if report.get("displayName", "").startswith("Daily Report"):
-                    file_date = report.get("fileActlName", "").replace("dly", "").replace(".zip", "")
-                    if target_ddmmyyyy in file_date:
-                        download_url = report["filePath"] + report["fileActlName"]
-                        break
-            if download_url:
-                break
+                file_date = report.get("fileActlName", "").replace("dly", "").replace(".zip", "")
+                if target_ddmmyyyy in file_date:
+                    download_url = report["filePath"] + report["fileActlName"]
+                    break
+        if download_url:
+            break
 
     if not download_url:
         raise RuntimeError("No WDM daily report found")

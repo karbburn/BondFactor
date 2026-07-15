@@ -24,7 +24,7 @@ def archive_zero_curve(db: Session, curve_date) -> bool:
             RawParYieldObservation.observation_date == curve_date,
             RawParYieldObservation.fetch_status.in_(["success", "manual_override"]),
             RawParYieldObservation.tenor_years.isnot(None),
-            RawParYieldObservation.yield_value.isnot(None),
+            RawParYieldObservation.par_yield.isnot(None),
         )
         .order_by(RawParYieldObservation.tenor_years.asc())
         .all()
@@ -35,7 +35,7 @@ def archive_zero_curve(db: Session, curve_date) -> bool:
         return False
 
     tenors = np.array([float(r.tenor_years) for r in rows])
-    yields = np.array([float(r.yield_value) for r in rows])
+    yields = np.array([float(r.par_yield) for r in rows])
 
     source = rows[0].source
     yield_type = "zero_coupon" if source == "nse_zcyc" else "par"

@@ -31,13 +31,13 @@ def calibrate_factor_shocks_from_history(calibrations: list) -> dict:
     beta1_series = []
     beta2_series = []
     beta3_series = []
+    valid_calibrations = []
 
     for c in nss_calibrations:
         if hasattr(c, "beta0"):
-            b0 = float(c.beta0) if c.beta0 is not None else 0.0
-            b1 = float(c.beta1) if c.beta1 is not None else 0.0
-            b2 = float(c.beta2) if c.beta2 is not None else 0.0
-            b3 = float(c.beta3) if c.beta3 is not None else 0.0
+            if c.beta0 is None or c.beta1 is None or c.beta2 is None or c.beta3 is None:
+                continue
+            b0, b1, b2, b3 = float(c.beta0), float(c.beta1), float(c.beta2), float(c.beta3)
         else:
             b0 = float(c.get("beta0", 0.0))
             b1 = float(c.get("beta1", 0.0))
@@ -48,6 +48,20 @@ def calibrate_factor_shocks_from_history(calibrations: list) -> dict:
         beta1_series.append(b1)
         beta2_series.append(b2)
         beta3_series.append(b3)
+        valid_calibrations.append(c)
+
+    T = len(valid_calibrations)
+    if T <= 1:
+        return {
+            "parallel_shift": 0.0,
+            "slope_shock": 0.0,
+            "curvature1_shock": 0.0,
+            "curvature2_shock": 0.0,
+            "data_points": T,
+            "confidence_level": "insufficient_data",
+            "earliest_date": None,
+            "latest_date": None
+        }
 
     d0 = np.abs(np.diff(beta0_series))
     d1 = np.abs(np.diff(beta1_series))
@@ -59,12 +73,12 @@ def calibrate_factor_shocks_from_history(calibrations: list) -> dict:
     curvature1_shock = float(np.percentile(d2, 95))
     curvature2_shock = float(np.percentile(d3, 95))
 
-    if hasattr(nss_calibrations[0], "curve_date"):
-        earliest_date = nss_calibrations[0].curve_date.strftime("%Y-%m-%d")
-        latest_date = nss_calibrations[-1].curve_date.strftime("%Y-%m-%d")
+    if hasattr(valid_calibrations[0], "curve_date"):
+        earliest_date = valid_calibrations[0].curve_date.strftime("%Y-%m-%d")
+        latest_date = valid_calibrations[-1].curve_date.strftime("%Y-%m-%d")
     else:
-        earliest_date = str(nss_calibrations[0].get("curve_date"))
-        latest_date = str(nss_calibrations[-1].get("curve_date"))
+        earliest_date = str(valid_calibrations[0].get("curve_date"))
+        latest_date = str(valid_calibrations[-1].get("curve_date"))
 
     if T < 30:
         confidence = "very_low"

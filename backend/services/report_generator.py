@@ -199,6 +199,7 @@ def generate_report(report_id: str):
             else:
                 shocked_params = None
                 shocked_zc = base_zc
+                shocks["note"] = "Scenario shocks not applicable for cubic spline models"
 
             pos_results = []
             for pp, sec in positions_db:
@@ -398,6 +399,12 @@ def _render_pdf(path, portfolio_name, curve_date, scenario_results, base_zc_data
             pdf.cell(W / 6, 6, txt)
         pdf.ln(10)
 
+        if "note" in s:
+            pdf.set_font("Helvetica", "I", 7)
+            pdf.set_text_color(*C_DIM)
+            pdf.cell(0, 5, s["note"], new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(2)
+
         agg = sc["summary"]
         _section("PORTFOLIO RISK SUMMARY")
         metrics = [
@@ -573,6 +580,9 @@ def _render_xlsx(path, portfolio_name, curve_date, scenario_results, base_zc_dat
         ws_sc.append([f"Parallel: {s['parallel_shift']:+.2f}%  Slope: {s['slope_shock']:+.2f}%  "
                       f"Curv1: {s['curvature1_shock']:+.2f}%  Curv2: {s['curvature2_shock']:+.2f}%  "
                       f"Twist: {s['twist_shock']:+.2f}%  Pivot: {s['twist_pivot']:.1f}Y"])
+        if "note" in s:
+            ws_sc.append([s["note"]])
+            ws_sc.cell(ws_sc.max_row, 1).font = Font(italic=True, color="888888")
         ws_sc.append([])
 
         header_row = ws_sc.max_row + 1

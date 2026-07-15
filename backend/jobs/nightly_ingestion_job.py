@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-from ingestion import nse_zcyc_client, manual_csv_loader, validators
+from ingestion import nse_zcyc_csv_fetcher, manual_csv_loader, validators
 from ingestion.fbil_client import RawObservationBatch, FetchFailure
 from db.models import RawParYieldObservation
 
@@ -46,12 +46,22 @@ def run_ingestion(date: str, db: Session) -> RawObservationBatch:
     """
     logger.info(f"Starting ingestion process for date: {date}")
     
-    # 1. Attempt NSE ZCYC
-    result = nse_zcyc_client.fetch(date)
+    # 1. Attempt NSE WDM fetch
+    try:
+        observations, trade_date = nse_zcyc_csv_fetcher.fetch_wdm_yields()
+        result = RawObservationBatch(
+            date=trade_date.isoformat(),
+            source="nse_wdm",
+            observations=observations,
+            raw_payload={"source": "WDM daily trade data"}
+        )
+    except Exception as e:
+        logger.warning(f"NSE WDM fetch failed: {e}. Attempting manual CSV fallback...")
+        result = FetchFailure(date=date, source="nse_wdm", reason=str(e))
     
-    # 2. Fall back to manual CSV if NSE ZCYC fails
+    # 2. Fall back to manual CSV if WDM fails
     if result.failed:
-        logger.warning(f"NSE ZCYC fetch failed for date {date}: {result.reason}. Attempting manual CSV fallback...")
+        logger.warning(f"NSE WDM fetch failed for date {date}: {result.reason}. Attempting manual CSV fallback...")
         persist_failed_attempt(db, result)
         result = manual_csv_loader.fetch(date)
         

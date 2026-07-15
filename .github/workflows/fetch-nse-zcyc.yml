@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: 'Target date (YYYY-MM-DD). Defaults to previous trading day.'
+        description: 'Target date (YYYY-MM-DD). Defaults to latest available.'
         required: false
 
 jobs:
@@ -22,25 +22,20 @@ jobs:
       - name: Fetch WDM yields
         id: fetch
         continue-on-error: true
-        run: |
-          ARGS=""
-          if [ -n "${{ github.event.inputs.date }}" ]; then
-            ARGS="${{ github.event.inputs.date }}"
-          fi
-          python backend/ingestion/nse_zcyc_csv_fetcher.py $ARGS
-          # Find the CSV that was just created
-          CSV=$(ls -t backend/data/manual_yields_*.csv 2>/dev/null | head -1)
-          if [ -n "$CSV" ]; then
-            echo "csv=$CSV" >> "$GITHUB_OUTPUT"
-          fi
+        run: python backend/ingestion/nse_zcyc_csv_fetcher.py
         env:
           PYTHONPATH: backend
 
       - name: Commit CSV
-        if: steps.fetch.outcome == 'success' && steps.fetch.outputs.csv != ''
+        if: steps.fetch.outcome == 'success'
         run: |
+          CSV=$(ls -t backend/data/manual_yields_*.csv 2>/dev/null | head -1)
+          if [ -z "$CSV" ]; then
+            echo "No CSV found"
+            exit 1
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f "${{ steps.fetch.outputs.csv }}"
-          git diff --cached --quiet || git commit -m "Add yield data $(date -u +%Y-%m-%d)"
+          git add -f "$CSV"
+          git diff --cached --quiet || git commit -m "Add yield data"
           git push

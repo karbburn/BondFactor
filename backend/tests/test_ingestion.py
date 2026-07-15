@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from db.session import engine, SessionLocal
 from db.models import Base, RawParYieldObservation
 from ingestion.fbil_client import RawObservationBatch, FetchFailure
-from ingestion import nse_zcyc_client, manual_csv_loader, validators
+from ingestion import manual_csv_loader, validators
 from jobs.nightly_ingestion_job import run_ingestion, persist_failed_attempt, persist_raw_observations
 
 # Create tables in the in-memory SQLite database before tests run
@@ -35,38 +35,29 @@ MOCK_OBSERVATIONS = [
     {"tenor_label": "10Y", "tenor_years": 10.0, "yield_value": 7.28}
 ]
 
-# Test 1: NSE ZCYC Success Path
-@patch("ingestion.nse_zcyc_client.fetch")
-def test_nse_zcyc_success(mock_fetch, db_session: Session):
-    mock_fetch.return_value = RawObservationBatch(
-        date="2026-07-10",
-        source="nse_zcyc",
-        observations=MOCK_OBSERVATIONS,
-        raw_payload={"mocked": True}
-    )
+# Test 1: NSE WDM Success Path
+@patch("ingestion.nse_zcyc_csv_fetcher.fetch_wdm_yields")
+def test_nse_wdm_success(mock_fetch, db_session: Session):
+    mock_fetch.return_value = (MOCK_OBSERVATIONS, date(2026, 7, 10))
     
     batch = run_ingestion("2026-07-10", db_session)
         
-    assert batch.source == "nse_zcyc"
+    assert batch.source == "nse_wdm"
     assert not batch.failed
     assert len(batch.observations) == 2
     
     # Verify DB contains the entries
     db_records = db_session.query(RawParYieldObservation).all()
     assert len(db_records) == 2
-    assert db_records[0].source == "nse_zcyc"
+    assert db_records[0].source == "nse_wdm"
     assert db_records[0].fetch_status == "success"
     assert db_records[0].tenor_label == "91D"
     assert float(db_records[0].par_yield) == 6.85
 
-# Test 2: NSE ZCYC Fails, manual_csv succeeds (Fallback Path)
-@patch("ingestion.nse_zcyc_client.fetch")
-def test_nse_zcyc_fail_manual_csv_success(mock_fetch, db_session: Session):
-    mock_fetch.return_value = FetchFailure(
-        date="2026-07-10",
-        source="nse_zcyc",
-        reason="API Timeout"
-    )
+# Test 2: NSE WDM Fails, manual_csv succeeds (Fallback Path)
+@patch("ingestion.nse_zcyc_csv_fetcher.fetch_wdm_yields")
+def test_nse_wdm_fail_manual_csv_success(mock_fetch, db_session: Session):
+    mock_fetch.side_effect = RuntimeError("API Timeout")
     
     # Create manual CSV file
     data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
@@ -88,9 +79,9 @@ def test_nse_zcyc_fail_manual_csv_success(mock_fetch, db_session: Session):
         assert len(batch.observations) == 2
         
         # Verify DB contains:
-        # 1. One failed audit record for nse_zcyc
+        # 1. One failed audit record for nse_wdm
         # 2. Two success records for manual_csv
-        failed_record = db_session.query(RawParYieldObservation).filter_by(source="nse_zcyc").one()
+        failed_record = db_session.query(RawParYieldObservation).filter_by(source="nse_wdm").one()
         assert failed_record.fetch_status == "failed"
         
         success_records = db_session.query(RawParYieldObservation).filter_by(source="manual_csv", fetch_status="manual_override").all()
@@ -102,14 +93,10 @@ def test_nse_zcyc_fail_manual_csv_success(mock_fetch, db_session: Session):
         if os.path.exists(csv_path):
             os.remove(csv_path)
 
-# Test 3: NSE ZCYC & manual_csv both fail (Complete failure)
-@patch("ingestion.nse_zcyc_client.fetch")
+# Test 3: NSE WDM & manual_csv both fail (Complete failure)
+@patch("ingestion.nse_zcyc_csv_fetcher.fetch_wdm_yields")
 def test_all_sources_fail(mock_fetch, db_session: Session):
-    mock_fetch.return_value = FetchFailure(
-        date="2026-07-10",
-        source="nse_zcyc",
-        reason="API Connection Failure"
-    )
+    mock_fetch.side_effect = RuntimeError("API Connection Failure")
     
     # Mock manual CSV file to not exist
     csv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "manual_yields_2026-07-10.csv"))
@@ -121,8 +108,8 @@ def test_all_sources_fail(mock_fetch, db_session: Session):
             
     assert "All ingestion sources failed" in str(exc_info.value)
     
-    # Verify DB contains failed logs for nse_zcyc and manual_csv
-    nse_fail = db_session.query(RawParYieldObservation).filter_by(source="nse_zcyc").one()
+    # Verify DB contains failed logs for nse_wdm and manual_csv
+    nse_fail = db_session.query(RawParYieldObservation).filter_by(source="nse_wdm").one()
     manual_fail = db_session.query(RawParYieldObservation).filter_by(source="manual_csv").one()
     
     assert nse_fail.fetch_status == "failed"

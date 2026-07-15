@@ -75,6 +75,14 @@ def trigger_ingestion(
             "source": batch.source,
             "observations_count": len(batch.observations)
         }
+    except RuntimeError as e:
+        # Expected when no data sources available for the date
+        return {
+            "status": "skipped",
+            "message": f"Ingestion skipped for {target_date}: {str(e)}",
+            "source": None,
+            "observations_count": 0
+        }
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -170,9 +170,12 @@ def generate_report(report_id: str):
             base_params = None
         else:
             base_params = {
-                "beta0": float(cal.beta0), "beta1": float(cal.beta1),
-                "beta2": float(cal.beta2), "beta3": float(cal.beta3),
-                "tau1": float(cal.tau1), "tau2": float(cal.tau2),
+                "beta0": float(cal.beta0) if cal.beta0 is not None else 0.0,
+                "beta1": float(cal.beta1) if cal.beta1 is not None else 0.0,
+                "beta2": float(cal.beta2) if cal.beta2 is not None else 0.0,
+                "beta3": float(cal.beta3) if cal.beta3 is not None else 0.0,
+                "tau1": float(cal.tau1) if cal.tau1 is not None else 0.1,
+                "tau2": float(cal.tau2) if cal.tau2 is not None else 1.0,
             }
             base_zc = _build_zero_curve(base_params, cal.yield_type)
         curve_date = cal.curve_date

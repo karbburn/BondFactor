@@ -1,54 +1,46 @@
-name: Fetch NSE ZCYC Data
+name: Fetch NSE Yield Data
 
 on:
   workflow_dispatch:
     inputs:
       date:
-        description: 'Target date (YYYY-MM-DD). Defaults to today.'
+        description: 'Target date (YYYY-MM-DD). Defaults to previous trading day.'
         required: false
 
 jobs:
-  fetch-nse-data:
+  fetch-yields:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install dependencies
-        run: pip install curl_cffi xlrd
+      - run: pip install curl_cffi
 
-      - name: Fetch NSE ZCYC and save CSV
+      - name: Fetch WDM yields
         id: fetch
         continue-on-error: true
         run: |
-          TARGET_DATE="${{ github.event.inputs.date }}"
-          if [ -z "$TARGET_DATE" ]; then
-            TARGET_DATE=$(python -c "from datetime import date; print(date.today().isoformat())")
+          ARGS=""
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            ARGS="${{ github.event.inputs.date }}"
           fi
-          echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
-
-          python backend/ingestion/nse_zcyc_csv_fetcher.py "$TARGET_DATE"
+          python backend/ingestion/nse_zcyc_csv_fetcher.py $ARGS
+          # Find the CSV that was just created
+          CSV=$(ls -t backend/data/manual_yields_*.csv 2>/dev/null | head -1)
+          if [ -n "$CSV" ]; then
+            echo "csv=$CSV" >> "$GITHUB_OUTPUT"
+          fi
         env:
           PYTHONPATH: backend
 
-      - name: Commit CSV if fetch succeeded
-        if: steps.fetch.outcome == 'success'
+      - name: Commit CSV
+        if: steps.fetch.outcome == 'success' && steps.fetch.outputs.csv != ''
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          FILE="backend/data/manual_yields_${{ steps.fetch.outputs.target_date }}.csv"
-          if [ -f "$FILE" ]; then
-            git add "$FILE"
-            git diff --cached --quiet || git commit -m "Add NSE ZCYC data for ${{ steps.fetch.outputs.target_date }}"
-            git push
-          fi
-
-      - name: Report skip if fetch failed
-        if: steps.fetch.outcome == 'failure'
-        run: |
-          echo "::warning::NSE ZCYC fetch failed — NSE blocks datacenter IPs. Run the fetcher locally: python backend/ingestion/nse_zcyc_csv_fetcher.py ${{ github.event.inputs.date }}"
+          git add "${{ steps.fetch.outputs.csv }}"
+          git diff --cached --quiet || git commit -m "Add yield data $(date -u +%Y-%m-%d)"
+          git push

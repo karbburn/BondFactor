@@ -1,150 +1,136 @@
 """
-Fetch NSE ZCYC data using curl_cffi (bypasses Akamai TLS fingerprinting).
-Designed to run locally or from a non-datacenter IP.
+Fetch G-Sec yields from NSE WDM daily trade data.
+Uses curl_cffi to bypass Akamai TLS fingerprinting.
 
 Usage:
-    python nse_zcyc_csv_fetcher.py              # fetches today's data
+    python nse_zcyc_csv_fetcher.py              # fetches previous trading day
     python nse_zcyc_csv_fetcher.py 2026-07-14   # fetches specific date
 """
 import os
+import csv
 import io
-import json
-import zipfile
+import re
 import sys
-from datetime import datetime, date
+import zipfile
+from datetime import date, datetime
+from collections import defaultdict
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
+# ponytail: tenor mapping is approximate — NSS calibration smooths it out
+TENOR_MAP = {
+    "91D": (0.25, "91D"), "182D": (0.50, "182D"), "364D": (1.00, "364D"),
+}
 
-def fetch_nse_zcyc(target_date: date) -> list[dict]:
-    """Fetch NSE ZCYC Excel for target_date, return list of observation dicts."""
+
+def _map_bond_tenor(security: str, trade_year: int) -> tuple[float, str] | None:
+    """Map GOI bond security name (e.g. CG2029) to (tenor_years, label)."""
+    m = re.match(r"CG(\d{4})", security)
+    if not m:
+        return None
+    mat_year = int(m.group(1))
+    tenor = mat_year - trade_year
+    if tenor <= 0:
+        return None
+    label = f"{tenor}Y"
+    return (float(tenor), label)
+
+
+def fetch_wdm_yields(target_date: date) -> list[dict]:
+    """Fetch WDM daily trade data, filter GOI bonds + T-bills, return yield observations."""
     from curl_cffi import requests as cffi_requests
-    import xlrd
-
-    date_formatted = target_date.strftime("%d-%m-%Y")
 
     session = cffi_requests.Session(impersonate="chrome")
-
-    # Warm up
     warmup = session.get("https://www.nseindia.com/", timeout=15)
     if warmup.status_code != 200:
         raise RuntimeError(f"NSE warm-up failed: {warmup.status_code}")
 
-    # Fetch the archive ZIP — try multiple archive name variants
-    name_variants = [
-        "WDM - ZCYC",
-        "WDM-ZCYC",
-        "ZCYC",
-    ]
+    headers = {"Referer": "https://www.nseindia.com/all-reports-debt"}
 
-    last_error = None
-    for name in name_variants:
-        archives = [{"name": name, "type": "archives", "category": "debt", "section": "debt-segment", "link": ""}]
-        params = {"archives": json.dumps(archives), "date": date_formatted, "type": "Archives", "mode": "single"}
+    resp = session.get("https://www.nseindia.com/api/daily-reports?key=WDM", headers=headers, timeout=10)
+    if resp.status_code != 200:
+        raise RuntimeError(f"WDM reports API returned {resp.status_code}")
 
-        resp = session.get(
-            "https://www.nseindia.com/api/reports",
-            params=params,
-            headers={
-                "Referer": "https://www.nseindia.com/all-reports-debt",
-                "Accept": "application/json, text/plain, */*",
-            },
-            timeout=20,
-        )
+    reports = resp.json()
 
-        if resp.status_code != 200:
-            last_error = f"HTTP {resp.status_code}"
-            continue
+    # Ponytail: PreviousDay is always complete; CurrentDay is mid-session
+    download_url = None
+    target_ddmmyyyy = target_date.strftime("%d%m%Y")
 
-        ct = resp.headers.get("content-type", "")
-        if "json" in ct:
-            # JSON error response — file not found
-            try:
-                err = resp.json()
-                last_error = err.get("error", str(err))
-            except Exception:
-                last_error = resp.text[:100]
-            continue
-
-        # Got binary content — assume it's the ZIP
-        zip_data = io.BytesIO(resp.content)
-        if not zipfile.is_zipfile(zip_data):
-            last_error = "Response is not a valid ZIP file"
-            continue
-
-        with zipfile.ZipFile(zip_data) as z:
-            xls_file = next((f for f in z.namelist() if f.endswith(".xls")), None)
-            if not xls_file:
-                last_error = f"No .xls in ZIP: {z.namelist()}"
-                continue
-            xls_content = z.read(xls_file)
-
-        # Parse the Excel
-        return _parse_xls(xls_content, target_date, xls_file, date_formatted)
-
-    raise RuntimeError(f"All NSE archive name variants failed. Last error: {last_error}")
-
-
-def _parse_xls(xls_content: bytes, target_date: date, xls_file: str, date_formatted: str) -> list[dict]:
-    """Parse NSE ZCYC Excel and extract observations."""
-    import xlrd
-
-    book = xlrd.open_workbook(file_contents=xls_content)
-    if "calc" not in book.sheet_names():
-        raise RuntimeError("Sheet 'calc' not found in Excel workbook")
-
-    sheet = book.sheet_by_name("calc")
-    if sheet.nrows < 2 or sheet.ncols < 2:
-        raise RuntimeError("Sheet 'calc' has insufficient rows/columns")
-
-    # Find column for target_date
-    col_idx = None
-    for c in range(1, sheet.ncols):
-        try:
-            y, m, d, _, _, _ = xlrd.xldate_as_tuple(sheet.cell_value(0, c), book.datemode)
-            if date(y, m, d) == target_date:
-                col_idx = c
+    # If target is today, use PreviousDay (complete data)
+    if target_date == date.today():
+        for report in reports.get("PreviousDay", []):
+            if report.get("displayName", "").startswith("Daily Report"):
+                download_url = report["filePath"] + report["fileActlName"]
                 break
-        except Exception:
+    else:
+        # Specific past date — find matching report
+        for day_key in ["PreviousDay", "CurrentDay"]:
+            for report in reports.get(day_key, []):
+                if report.get("displayName", "").startswith("Daily Report"):
+                    file_date = report.get("fileActlName", "").replace("dly", "").replace(".zip", "")
+                    if target_ddmmyyyy in file_date:
+                        download_url = report["filePath"] + report["fileActlName"]
+                        break
+            if download_url:
+                break
+
+    if not download_url:
+        raise RuntimeError("No WDM daily report found")
+
+    # Download and extract
+    zip_resp = session.get(download_url, headers=headers, timeout=20)
+    if zip_resp.status_code != 200:
+        raise RuntimeError(f"Download failed: {zip_resp.status_code}")
+
+    with zipfile.ZipFile(io.BytesIO(zip_resp.content)) as z:
+        csv_name = next((f for f in z.namelist() if f.endswith("_sett.csv")), None)
+        if not csv_name:
+            raise RuntimeError(f"No settlement CSV in ZIP: {z.namelist()}")
+        csv_content = z.read(csv_name).decode("utf-8")
+
+    # Parse CSV
+    reader = csv.DictReader(io.StringIO(csv_content))
+    security_data = defaultdict(lambda: {"value": 0.0, "weighted_sum": 0.0, "sectype": ""})
+
+    for row in reader:
+        sectype = row["Sectype"].strip()
+        if sectype not in ("GS", "TB"):
             continue
-    if col_idx is None:
-        raise RuntimeError(f"Date {target_date} not found in Excel column headers")
-
-    target_tenors = {
-        "91D": 0.25, "182D": 0.50, "364D": 1.00, "2Y": 2.00, "3Y": 3.00,
-        "5Y": 5.00, "7Y": 7.00, "10Y": 10.00, "15Y": 15.00, "20Y": 20.00,
-        "30Y": 30.00, "40Y": 40.00,
-    }
-
-    max_tenor, max_row = 0.0, None
-    for r in range(1, sheet.nrows):
         try:
-            tv = float(sheet.cell_value(r, 0))
-            if tv > max_tenor:
-                max_tenor, max_row = tv, r
-        except (ValueError, TypeError):
+            ytm = float(row["Weighted YTM"])
+            value = float(row["Traded Value (Rs.Cr.)"])
+        except (ValueError, KeyError):
             continue
+        security = row["Security"].strip()
+        security_data[security]["value"] += value
+        security_data[security]["weighted_sum"] += value * ytm
+        security_data[security]["sectype"] = sectype
 
+    # Get trade date from first data row
+    first_row = next(csv.DictReader(io.StringIO(csv_content)))
+    trade_date = datetime.strptime(first_row["Trade date"].strip(), "%d-%b-%Y").date()
+    trade_year = trade_date.year
+
+    # Map to tenors
     observations = []
-    for label, target in target_tenors.items():
-        if target > max_tenor and max_row is not None:
-            yld = float(sheet.cell_value(max_row, col_idx))
-        else:
-            closest, best = None, float("inf")
-            for r in range(1, sheet.nrows):
-                try:
-                    tv = float(sheet.cell_value(r, 0))
-                    diff = abs(tv - target)
-                    if diff < best:
-                        best, closest = diff, r
-                except (ValueError, TypeError):
-                    continue
-            if closest is None:
-                continue
-            yld = float(sheet.cell_value(closest, col_idx))
-        observations.append({"tenor_label": label, "tenor_years": target, "yield_value": yld})
+    for security, data in security_data.items():
+        if data["value"] == 0:
+            continue
+        avg_ytm = data["weighted_sum"] / data["value"]
 
-    return observations
+        if data["sectype"] == "TB":
+            tenor_part = security.split(",")[0].strip()
+            if tenor_part in TENOR_MAP:
+                tenor_years, label = TENOR_MAP[tenor_part]
+                observations.append({"tenor_label": label, "tenor_years": tenor_years, "yield_value": avg_ytm})
+        elif data["sectype"] == "GS":
+            result = _map_bond_tenor(security, trade_year)
+            if result:
+                tenor_years, label = result
+                observations.append({"tenor_label": label, "tenor_years": tenor_years, "yield_value": avg_ytm})
+
+    return observations, trade_date
 
 
 def save_csv(target_date: date, observations: list[dict]) -> str:
@@ -163,11 +149,11 @@ def save_csv(target_date: date, observations: list[dict]) -> str:
 if __name__ == "__main__":
     target = date.fromisoformat(sys.argv[1]) if len(sys.argv) > 1 else date.today()
 
-    print(f"Fetching NSE ZCYC for {target}...")
+    print(f"Fetching WDM yields for {target}...")
     try:
-        obs = fetch_nse_zcyc(target)
-        path = save_csv(target, obs)
-        print(f"Saved {len(obs)} observations to {path}")
+        observations, trade_date = fetch_wdm_yields(target)
+        path = save_csv(trade_date, observations)
+        print(f"Saved {len(observations)} observations to {path}")
     except Exception as e:
         print(f"Failed: {e}", file=sys.stderr)
         sys.exit(1)

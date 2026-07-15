@@ -92,6 +92,14 @@ def archive_zero_curve(db: Session, curve_date) -> bool:
             cal.beta3 = params[3]
             cal.tau1 = params[4]
             cal.tau2 = params[5]
+        else:
+            cal.beta0 = None
+            cal.beta1 = None
+            cal.beta2 = None
+            cal.beta3 = None
+            cal.tau1 = None
+            cal.tau2 = None
+            cal.spline_knots = {"tenors": tenors.tolist(), "yields": yields.tolist()}
         db.query(ReferenceZeroCurve).filter(ReferenceZeroCurve.calibration_id == cal.id).delete()
     else:
         cal = CurveCalibration(

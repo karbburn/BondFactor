@@ -154,12 +154,27 @@ def generate_report(report_id: str):
         if not cal:
             raise ValueError("No active curve calibration found")
 
-        base_params = {
-            "beta0": float(cal.beta0), "beta1": float(cal.beta1),
-            "beta2": float(cal.beta2), "beta3": float(cal.beta3),
-            "tau1": float(cal.tau1), "tau2": float(cal.tau2),
-        }
-        base_zc = _build_zero_curve(base_params, cal.yield_type)
+        if cal.model_type == "cubic_spline":
+            from quant_core.spline import CubicSplineCurve
+            from db.models import ReferenceZeroCurve
+            zc_rows = (
+                db.query(ReferenceZeroCurve)
+                .filter(ReferenceZeroCurve.calibration_id == cal.id)
+                .order_by(ReferenceZeroCurve.tenor_years.asc())
+                .all()
+            )
+            tenors = np.array([float(r.tenor_years) for r in zc_rows])
+            zero_rates = np.array([float(r.zero_rate) for r in zc_rows])
+            spline = CubicSplineCurve(tenors, zero_rates)
+            base_zc = build_zero_curve_from_zero_rates(spline.evaluate, 40.0, 0.5)
+            base_params = None
+        else:
+            base_params = {
+                "beta0": float(cal.beta0), "beta1": float(cal.beta1),
+                "beta2": float(cal.beta2), "beta3": float(cal.beta3),
+                "tau1": float(cal.tau1), "tau2": float(cal.tau2),
+            }
+            base_zc = _build_zero_curve(base_params, cal.yield_type)
         curve_date = cal.curve_date
         sd = get_settlement_date(curve_date)
 
@@ -175,21 +190,27 @@ def generate_report(report_id: str):
                 "twist_shock": sc.get("twist_shock", 0.0),
                 "twist_pivot": sc.get("twist_pivot", 5.0),
             }
-            shocked_params = apply_scenario_shocks(base_params, **shocks)
-            shocked_zc = _build_zero_curve(shocked_params, cal.yield_type)
+            if base_params is not None:
+                shocked_params = apply_scenario_shocks(base_params, **shocks)
+                shocked_zc = _build_zero_curve(shocked_params, cal.yield_type)
+            else:
+                shocked_params = None
+                shocked_zc = base_zc
 
             pos_results = []
             for pp, sec in positions_db:
                 pos_results.append(_compute_position(sec, float(pp.face_value_held), base_zc, shocked_zc, sd))
 
             agg = _aggregate(pos_results)
-            scenario_results.append({
+            entry = {
                 "name": sc.get("name", "Scenario"),
                 "shocks": shocks,
                 "positions": pos_results,
                 "summary": agg,
-                "shocked_params": shocked_params,
-            })
+            }
+            if shocked_params is not None:
+                entry["shocked_params"] = shocked_params
+            scenario_results.append(entry)
 
         # Build zero curve data for report
         base_zc_data = []
@@ -377,12 +398,12 @@ def _render_pdf(path, portfolio_name, curve_date, scenario_results, base_zc_data
         agg = sc["summary"]
         _section("PORTFOLIO RISK SUMMARY")
         metrics = [
-            ("TOTAL BASE DIRTY", f"Rs. {agg['total_base_dirty']:,.2f}"),
-            ("CLEAN VALUE", f"Rs. {agg['total_base_clean']:,.2f}"),
-            ("SHOCKED VALUE", f"Rs. {agg['total_shocked_dirty']:,.2f}"),
-            ("SCENARIO P&L", f"Rs. {agg['total_pnl']:+,.2f}"),
+            ("TOTAL BASE DIRTY", f"₹ {agg['total_base_dirty']:,.2f}"),
+            ("CLEAN VALUE", f"₹ {agg['total_base_clean']:,.2f}"),
+            ("SHOCKED VALUE", f"₹ {agg['total_shocked_dirty']:,.2f}"),
+            ("SCENARIO P&L", f"₹ {agg['total_pnl']:+,.2f}"),
             ("MOD. DURATION", f"{agg['port_mod_dur']:.4f} Y"),
-            ("TOTAL DV01", f"Rs. {agg['total_dv01']:,.2f}"),
+            ("TOTAL DV01", f"₹ {agg['total_dv01']:,.2f}"),
             ("CONVEXITY", f"{agg['port_convexity']:.4f}"),
         ]
         card_w = (W - 6) / 4

@@ -1,6 +1,6 @@
 import os
 import time
-import threading
+import asyncio
 import httpx
 from fastapi import Header, HTTPException
 from typing import Dict
@@ -8,7 +8,7 @@ from typing import Dict
 # In-memory token cache, 60s TTL — saves a Supabase roundtrip per request
 _token_cache: Dict[str, tuple] = {}
 _CACHE_TTL = 60
-_cache_lock = threading.Lock()
+_cache_lock = asyncio.Lock()
 
 async def get_current_user(authorization: str = Header(None)) -> Dict:
     """Validates a Supabase-issued Bearer token via Supabase's /auth/v1/user endpoint.
@@ -26,7 +26,7 @@ async def get_current_user(authorization: str = Header(None)) -> Dict:
 
     # Check cache
     now = time.time()
-    with _cache_lock:
+    async with _cache_lock:
         if token in _token_cache:
             user_data, expiry = _token_cache[token]
             if now < expiry:
@@ -75,7 +75,7 @@ async def get_current_user(authorization: str = Header(None)) -> Dict:
     }
 
     # Cache successful result
-    with _cache_lock:
+    async with _cache_lock:
         _token_cache[token] = (user_data, now + _CACHE_TTL)
         # Prune expired entries when cache grows large
         if len(_token_cache) > 100:

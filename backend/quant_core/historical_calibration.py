@@ -4,8 +4,17 @@ def calibrate_factor_shocks_from_history(calibrations: list) -> dict:
     """
     Given a list of CurveCalibration objects sorted by curve_date,
     calculates the 95th percentile of the absolute daily moves for beta0, beta1, beta2, beta3.
+    Only NSS calibrations are included; spline calibrations are skipped.
     """
-    T = len(calibrations)
+    def _is_spline(c):
+        if hasattr(c, "model_type"):
+            return c.model_type == "cubic_spline"
+        if isinstance(c, dict):
+            return c.get("model_type") == "cubic_spline"
+        return False
+
+    nss_calibrations = [c for c in calibrations if not _is_spline(c)]
+    T = len(nss_calibrations)
     if T <= 1:
         return {
             "parallel_shift": 0.0,
@@ -23,7 +32,7 @@ def calibrate_factor_shocks_from_history(calibrations: list) -> dict:
     beta2_series = []
     beta3_series = []
 
-    for c in calibrations:
+    for c in nss_calibrations:
         if hasattr(c, "beta0"):
             b0 = float(c.beta0) if c.beta0 is not None else 0.0
             b1 = float(c.beta1) if c.beta1 is not None else 0.0
@@ -50,12 +59,12 @@ def calibrate_factor_shocks_from_history(calibrations: list) -> dict:
     curvature1_shock = float(np.percentile(d2, 95))
     curvature2_shock = float(np.percentile(d3, 95))
 
-    if hasattr(calibrations[0], "curve_date"):
-        earliest_date = calibrations[0].curve_date.strftime("%Y-%m-%d")
-        latest_date = calibrations[-1].curve_date.strftime("%Y-%m-%d")
+    if hasattr(nss_calibrations[0], "curve_date"):
+        earliest_date = nss_calibrations[0].curve_date.strftime("%Y-%m-%d")
+        latest_date = nss_calibrations[-1].curve_date.strftime("%Y-%m-%d")
     else:
-        earliest_date = str(calibrations[0].get("curve_date"))
-        latest_date = str(calibrations[-1].get("curve_date"))
+        earliest_date = str(nss_calibrations[0].get("curve_date"))
+        latest_date = str(nss_calibrations[-1].get("curve_date"))
 
     if T < 30:
         confidence = "very_low"

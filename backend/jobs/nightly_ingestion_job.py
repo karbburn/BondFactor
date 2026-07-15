@@ -8,10 +8,15 @@ from db.models import RawParYieldObservation
 logger = logging.getLogger("nightly_ingestion")
 
 def persist_raw_observations(db: Session, batch: RawObservationBatch, status: str):
-    """Persists successful yield observations to raw_par_yield_observations."""
+    """Persists successful yield observations to raw_par_yield_observations (idempotent)."""
+    obs_date = datetime.strptime(batch.date, "%Y-%m-%d").date()
+    db.query(RawParYieldObservation).filter(
+        RawParYieldObservation.observation_date == obs_date,
+        RawParYieldObservation.source == batch.source,
+    ).delete()
     for point in batch.observations:
         obs = RawParYieldObservation(
-            observation_date=datetime.strptime(batch.date, "%Y-%m-%d").date(),
+            observation_date=obs_date,
             source=batch.source,
             tenor_label=point["tenor_label"],
             tenor_years=point["tenor_years"],
@@ -91,11 +96,13 @@ def run_ingestion(date: str, db: Session) -> RawObservationBatch:
     persist_raw_observations(db, result, status)
     logger.info(f"Successfully completed ingestion and persistence of {len(result.observations)} points from source '{result.source}' for date {date}")
 
-    # 6. Archive zero curve for this date
+    # 6. Archive zero curve for the actual fetched date (may differ from input date)
+    actual_date = datetime.strptime(result.date, "%Y-%m-%d").date()
     try:
         from jobs.archive_zero_curve import archive_zero_curve
-        archive_zero_curve(db, datetime.strptime(date, "%Y-%m-%d").date())
+        archive_zero_curve(db, actual_date)
     except Exception as e:
-        logger.warning(f"Zero curve archival failed for {date}: {e}")
+        logger.error(f"Zero curve archival failed for {actual_date}: {e}")
+        raise
 
     return result

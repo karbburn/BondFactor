@@ -19,7 +19,7 @@ def get_settlement_date(trade_date: date) -> date:
         return trade_date + timedelta(days=3)
     elif weekday == 5:  # Saturday -> Monday (skip weekend)
         return trade_date + timedelta(days=2)
-    elif weekday == 6:  # Sunday -> Tuesday (skip weekend + Monday)
+    elif weekday == 6:  # Sunday -> Tuesday (markets closed, trade effectively Monday, T+1 = Tuesday)
         return trade_date + timedelta(days=2)
     else:               # Monday-Thursday -> next business day
         return trade_date + timedelta(days=1)

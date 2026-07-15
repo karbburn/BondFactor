@@ -113,6 +113,7 @@ def archive_zero_curve(db: Session, curve_date) -> bool:
             beta3=params[3] if model_type == "nss" else None,
             tau1=params[4] if model_type == "nss" else None,
             tau2=params[5] if model_type == "nss" else None,
+            spline_knots={"tenors": tenors.tolist(), "yields": yields.tolist()} if model_type == "cubic_spline" else None,
             optimizer_converged=opt_result.get("success", False),
             fit_residual_error=validation_rmse,
             parameter_stability_delta=None,

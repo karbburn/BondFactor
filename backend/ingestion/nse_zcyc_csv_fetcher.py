@@ -53,15 +53,13 @@ def fetch_wdm_yields(target_date: date) -> list[dict]:
 
     reports = resp.json()
 
+    # Ponytail: grab whatever's最新 — CurrentDay if published, PreviousDay as fallback
     download_url = None
-    target_ddmmyyyy = target_date.strftime("%d%m%Y")
     for day_key in ["CurrentDay", "PreviousDay"]:
         for report in reports.get(day_key, []):
             if report.get("displayName", "").startswith("Daily Report"):
-                file_date = report.get("fileActlName", "").replace("dly", "").replace(".zip", "")
-                if target_ddmmyyyy in file_date:
-                    download_url = report["filePath"] + report["fileActlName"]
-                    break
+                download_url = report["filePath"] + report["fileActlName"]
+                break
         if download_url:
             break
 

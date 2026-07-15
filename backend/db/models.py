@@ -12,7 +12,7 @@ class RawParYieldObservation(Base):
     source = Column(String, nullable=False)
     tenor_label = Column(String, nullable=True)   # Nullable for failed fetches
     tenor_years = Column(Numeric, nullable=True)   # Nullable for failed fetches
-    yield_value = Column(Numeric, nullable=True)   # Nullable for failed fetches
+    yield_value = Column("par_yield", Numeric, nullable=True)   # DB column is par_yield, attribute renamed in code
     fetch_status = Column(String, nullable=False)  # 'success', 'failed', 'manual_override'
     fetched_at = Column(DateTime(timezone=True), nullable=False)
     raw_payload = Column(JSON, nullable=True)       # Stores error info or raw response payload

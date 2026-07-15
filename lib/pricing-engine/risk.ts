@@ -69,18 +69,18 @@ export function calculateConvexity(
     return 0.0;
   }
 
-  const shift = 0.1; // 10 bps zero rate shift
-  const h = 0.001;   // 10 bps decimal shift
+  const bpsShift = 0.1;      // 10 bps in percentage points
+  const decimalShift = 0.001; // 10 bps in decimal
   
-  const bumpedRatesUp = zc.zeroRates.map(r => r + shift);
+  const bumpedRatesUp = zc.zeroRates.map(r => r + bpsShift);
   const zcUp = new ZeroCurve(zc.maturities, bumpedRatesUp);
   const pUp = calculateDirtyPrice(settlementDate, cashflows, zcUp);
   
-  const bumpedRatesDown = zc.zeroRates.map(r => r - shift);
+  const bumpedRatesDown = zc.zeroRates.map(r => r - bpsShift);
   const zcDown = new ZeroCurve(zc.maturities, bumpedRatesDown);
   const pDown = calculateDirtyPrice(settlementDate, cashflows, zcDown);
   
-  return (pUp + pDown - 2.0 * p0) / (p0 * (h * h));
+  return (pUp + pDown - 2.0 * p0) / (p0 * (decimalShift * decimalShift));
 }
 
 export interface FactorPnLDecomposition {

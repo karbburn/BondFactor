@@ -20,19 +20,12 @@ export interface SecurityItem {
   is_active: boolean;
 }
 
-export interface NSSParams {
-  beta0: number;
-  beta1: number;
-  beta2: number;
-  beta3: number;
-  tau1: number;
-  tau2: number;
-}
+import { NSSParameters } from '../pricing-engine/types';
 
 export interface CurveResponse {
   curve_date: string;
   model_type: string;
-  parameters: NSSParams | null;
+  parameters: NSSParameters | null;
   spline_knots: unknown;
   diagnostics: {
     optimizer_converged: boolean;

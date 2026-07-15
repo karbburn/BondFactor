@@ -54,7 +54,7 @@ class PortfolioCreate(BaseModel):
     portfolio_name: str = Field(..., min_length=1)
 
 class PortfolioUpdate(BaseModel):
-    portfolio_name: str
+    portfolio_name: str = Field(..., min_length=1)
 
 class PortfolioSummary(BaseModel):
     id: str

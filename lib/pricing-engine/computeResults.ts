@@ -112,7 +112,11 @@ export function computePortfolioResults(
   }
 
   // Parse as local noon to avoid timezone day-shift from UTC-midnight string parsing
-  const [y, m, d] = curveDate.split('-').map(Number);
+  const dateParts = curveDate.split('-');
+  if (dateParts.length !== 3) {
+    throw new Error(`Invalid curve date format: ${curveDate}`);
+  }
+  const [y, m, d] = dateParts.map(Number);
   const sd = getSettlementDate(new Date(y, m - 1, d, 12, 0, 0));
 
   // Pre-bootstrap the 8 factor-perturbed curves once at the portfolio level

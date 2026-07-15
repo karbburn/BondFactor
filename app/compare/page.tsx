@@ -106,6 +106,15 @@ export default function ComparePage() {
   const baseZc = useMemo(() => buildZeroCurve(baseParams), [baseParams]);
   const shockedZc = useMemo(() => buildZeroCurve(applyShocks(baseParams, shocks)), [baseParams, shocks]);
 
+  const curveDate = useMemo(() => curve?.curve_date || new Date().toISOString().slice(0, 10), [curve?.curve_date]);
+
+  const portfolioResults = useMemo(() => {
+    return loaded.map(p => {
+      if (p.error) return null;
+      return computePortfolioResults(p.positions, baseZc, shockedZc, curveDate, baseParams, shocks);
+    });
+  }, [loaded, baseZc, shockedZc, curveDate, baseParams, shocks]);
+
   useEffect(() => {
     setLoaded(prev => {
       const filtered = prev.filter(l => compareIds.includes(l.id));
@@ -183,11 +192,9 @@ export default function ComparePage() {
                         </tr>
                       );
                     }
-                    const { summary } = computePortfolioResults(
-                      p.positions, baseZc, shockedZc, curve?.curve_date || new Date().toISOString().slice(0, 10),
-                      baseParams,
-                      shocks
-                    );
+                    const result = portfolioResults[i];
+                    if (!result) return null;
+                    const { summary } = result;
                     return (
                       <tr key={p.id}>
                         <td style={{ color: PANEL_COLORS[i % PANEL_COLORS.length], fontWeight: 600 }}>{p.name}</td>
@@ -228,11 +235,9 @@ export default function ComparePage() {
                 );
               }
               
-              const { computedPositions, summary } = computePortfolioResults(
-                p.positions, baseZc, shockedZc, curve?.curve_date || new Date().toISOString().slice(0, 10),
-                baseParams,
-                shocks
-              );
+              const result = portfolioResults[i];
+              if (!result) return null;
+              const { computedPositions, summary } = result;
               return (
                 <PortfolioComparisonPanel
                   key={p.id}

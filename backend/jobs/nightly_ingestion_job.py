@@ -61,7 +61,7 @@ def run_ingestion(date: str, db: Session) -> RawObservationBatch:
         logger.error(f"OPERATIONAL ALERT: All ingestion sources failed for date {date}. Final reason: {result.reason}")
         raise RuntimeError(f"All ingestion sources failed for date {date}: {result.reason}")
         
-    # 5. Validate the successful batch
+    # 4. Validate the successful batch
     try:
         validators.validate(result)
     except Exception as e:
@@ -76,12 +76,12 @@ def run_ingestion(date: str, db: Session) -> RawObservationBatch:
         persist_failed_attempt(db, failure)
         raise ValueError(f"Validation failed for ingested data: {str(e)}")
         
-    # 6. Persist validated observations
+    # 5. Persist validated observations
     status = "manual_override" if result.source == "manual_csv" else "success"
     persist_raw_observations(db, result, status)
     logger.info(f"Successfully completed ingestion and persistence of {len(result.observations)} points from source '{result.source}' for date {date}")
 
-    # 7. Archive zero curve for this date
+    # 6. Archive zero curve for this date
     try:
         from jobs.archive_zero_curve import archive_zero_curve
         archive_zero_curve(db, datetime.strptime(date, "%Y-%m-%d").date())

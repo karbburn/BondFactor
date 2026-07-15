@@ -42,7 +42,7 @@ export function ResultsProvider({ children }: { children: React.ReactNode }) {
   const shockedZc = useMemo(() => buildZeroCurve(applyShocks(baseParams, shocks)), [baseParams, shocks]);
 
   const { computedPositions, summary } = useMemo(
-    () => computePortfolioResults(portfolio, baseZc, shockedZc, curve?.curve_date || new Date().toISOString(), baseParams, shocks),
+    () => computePortfolioResults(portfolio, baseZc, shockedZc, curve?.curve_date || new Date().toISOString().slice(0, 10), baseParams, shocks),
     [portfolio, baseZc, shockedZc, curve, baseParams, shocks],
   );
 

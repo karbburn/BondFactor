@@ -81,9 +81,8 @@ def get_key_rate_tenors(db: Session = Depends(get_db)):
             TenorItem(label="30Y", years=30.0),
             TenorItem(label="40Y", years=40.0)
         ]
-        from datetime import date as _date
         return KeyRateTenorResponse(
-            effective_date=_date.today(),
+            effective_date=date.today(),
             tenors=default_tenors
         )
         
@@ -143,9 +142,19 @@ def get_historical_calibration(db: Session = Depends(get_db)):
 @router.get("/curves/{date_val}/zero-curve", response_model=List[ZeroCurvePoint])
 def get_zero_curve_by_date(date_val: date, db: Session = Depends(get_db)):
     """Returns the bootstrapped zero curve points for a specific date."""
+    cal = (
+        db.query(CurveCalibration)
+        .filter(CurveCalibration.curve_date == date_val, CurveCalibration.is_active == True)
+        .first()
+    )
+    if not cal:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No active calibration found for date {date_val}."
+        )
     points = (
         db.query(ReferenceZeroCurve)
-        .filter(ReferenceZeroCurve.curve_date == date_val)
+        .filter(ReferenceZeroCurve.calibration_id == cal.id)
         .order_by(ReferenceZeroCurve.tenor_years.asc())
         .all()
     )

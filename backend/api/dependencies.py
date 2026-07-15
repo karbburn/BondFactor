@@ -1,12 +1,14 @@
 import os
 import time
+import threading
 import httpx
 from fastapi import Header, HTTPException
 from typing import Dict
 
-    # In-memory token cache, 60s TTL — saves a Supabase roundtrip per request
+# In-memory token cache, 60s TTL — saves a Supabase roundtrip per request
 _token_cache: Dict[str, tuple] = {}
 _CACHE_TTL = 60
+_cache_lock = threading.Lock()
 
 async def get_current_user(authorization: str = Header(None)) -> Dict:
     """Validates a Supabase-issued Bearer token via Supabase's /auth/v1/user endpoint.
@@ -24,11 +26,12 @@ async def get_current_user(authorization: str = Header(None)) -> Dict:
 
     # Check cache
     now = time.time()
-    if token in _token_cache:
-        user_data, expiry = _token_cache[token]
-        if now < expiry:
-            return user_data
-        del _token_cache[token]
+    with _cache_lock:
+        if token in _token_cache:
+            user_data, expiry = _token_cache[token]
+            if now < expiry:
+                return user_data
+            del _token_cache[token]
 
     supabase_url = os.getenv("SUPABASE_URL")
     service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
@@ -72,12 +75,12 @@ async def get_current_user(authorization: str = Header(None)) -> Dict:
     }
 
     # Cache successful result
-    _token_cache[token] = (user_data, now + _CACHE_TTL)
-
-    # Prune expired entries when cache grows large
-    if len(_token_cache) > 100:
-        expired = [k for k, (_, exp) in _token_cache.items() if exp <= now]
-        for k in expired:
-            del _token_cache[k]
+    with _cache_lock:
+        _token_cache[token] = (user_data, now + _CACHE_TTL)
+        # Prune expired entries when cache grows large
+        if len(_token_cache) > 100:
+            expired = [k for k, (_, exp) in _token_cache.items() if exp <= now]
+            for k in expired:
+                del _token_cache[k]
 
     return user_data

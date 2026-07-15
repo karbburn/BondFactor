@@ -43,7 +43,13 @@ def trigger_ingestion(
             detail="Missing or invalid Authorization header. Expected Bearer token."
         )
 
-    token = authorization.split(" ")[1]
+    parts = authorization.split(" ", 1)
+    if len(parts) != 2 or not parts[1].strip():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid Authorization header. Expected Bearer token."
+        )
+    token = parts[1]
     if not hmac.compare_digest(token, service_key):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -99,7 +105,13 @@ def get_ingestion_status(
             detail="Missing or invalid Authorization header. Expected Bearer token."
         )
 
-    token = authorization.split(" ")[1]
+    parts = authorization.split(" ", 1)
+    if len(parts) != 2 or not parts[1].strip():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid Authorization header. Expected Bearer token."
+        )
+    token = parts[1]
     if not hmac.compare_digest(token, service_key):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

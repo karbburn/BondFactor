@@ -47,14 +47,14 @@ export function calculateYtm(
   couponFrequency: number = 2
 ): number {
   if (dirtyPrice <= 0) {
-    return 0.0;
+    return NaN;
   }
   
   const futureCfs = cashflows.filter(
     cf => (cf.date.getTime() - settlementDate.getTime()) > 0
   );
   if (futureCfs.length === 0) {
-    return 0.0;
+    return NaN;
   }
 
   // Pre-calculate time fractions to avoid redundant date math inside the solver loop
@@ -90,8 +90,7 @@ export function calculateYtm(
     fLow = objective(low);
     fHigh = objective(high);
     if (fLow * fHigh > 0) {
-      console.warn("YTM solver: expanded bracket search failed, returning fallback yield");
-      return 0.0;
+      return NaN; // ponytail: signal failure, callers must handle
     }
   }
 

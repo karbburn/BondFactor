@@ -423,7 +423,7 @@ body {
 }
 
 .layout-main {
-  flex: 1;
+  flex-grow: 1;
   padding-bottom: 2rem;
 }
 

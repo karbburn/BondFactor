@@ -175,7 +175,12 @@ BondFactor/
 │   │   ├── pricing.py            # Bond pricing
 │   │   ├── risk.py               # Duration / DV01 / Convexity
 │   │   ├── scenario.py           # Factor-shock scenarios
-│   │   └── krd.py                # Key Rate Duration
+│   │   ├── krd.py                # Key Rate Duration
+│   │   ├── spline.py             # Cubic spline fallback
+│   │   ├── cashflow.py           # Cashflow schedule generation
+│   │   ├── conventions.py        # Market conventions (day count, settlement)
+│   │   ├── calibration_validation.py  # NSS calibration validation
+│   │   └── historical_calibration.py  # Historical factor shock analysis
 │   ├── ingestion/                # Data fetch + validation
 │   ├── services/                 # Report generation
 │   └── tests/                    # pytest suite
@@ -194,7 +199,7 @@ Three-layer testing strategy:
 | **Golden Reference** | Benchmark security pricing vs. independently sourced market values | Market-accepted range |
 
 ```bash
-# Backend (79 tests)
+# Backend (71 tests)
 cd backend && python -m pytest tests/ -v
 
 # Frontend type check

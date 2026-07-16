@@ -2,12 +2,11 @@ import logging
 import numpy as np
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from db.models import RawParYieldObservation, CurveCalibration, ReferenceZeroCurve
 from quant_core.nss import calibrate_nss
 from quant_core.calibration_validation import validate_calibration
-from quant_core.bootstrap import bootstrap_zero_curve, build_zero_curve_from_zero_rates
+from quant_core.bootstrap import bootstrap_zero_curve
 
 logger = logging.getLogger("archive_zero_curve")
 
@@ -37,37 +36,24 @@ def archive_zero_curve(db: Session, curve_date) -> bool:
     tenors = np.array([float(r.tenor_years) for r in rows])
     yields = np.array([float(r.par_yield) for r in rows])
 
-    source = rows[0].source
-    yield_type = "zero_coupon" if source == "nse_zcyc" else "par"
+    yield_type = "par"
 
-    # Zero-coupon data skips NSS (designed for par curves), goes straight to spline
-    if yield_type == "zero_coupon":
-        from quant_core.spline import CubicSplineCurve
-        model_type = "cubic_spline"
-        curve_fn = CubicSplineCurve(tenors, yields).evaluate
-        opt_result = {"success": True, "fun": 0.0, "nfev": 0}
-        validation_rmse = 0.0
-        validation_passed = True
-        validation_reasons = []
-        params = [None] * 6
+    opt_result = calibrate_nss(tenors, yields)
+    params = [opt_result["beta0"], opt_result["beta1"], opt_result["beta2"],
+              opt_result["beta3"], opt_result["tau1"], opt_result["tau2"]]
+    validation = validate_calibration(opt_result, params, tenors, yields)
+    model_type = "nss" if not validation.fallback_used else "cubic_spline"
+    if model_type == "nss":
+        from quant_core.nss import nss_yield
+        curve_fn = lambda t: nss_yield(t, *params)
     else:
-        opt_result = calibrate_nss(tenors, yields)
-        params = [opt_result["beta0"], opt_result["beta1"], opt_result["beta2"],
-                  opt_result["beta3"], opt_result["tau1"], opt_result["tau2"]]
-        validation = validate_calibration(opt_result, params, tenors, yields)
-        model_type = "nss" if not validation.fallback_used else "cubic_spline"
-        if model_type == "nss":
-            from quant_core.nss import nss_yield
-            curve_fn = lambda t: nss_yield(t, *params)
-        else:
-            from quant_core.spline import CubicSplineCurve
-            curve_fn = CubicSplineCurve(tenors, yields).evaluate
-        validation_rmse = validation.rmse
-        validation_passed = validation.passed
-        validation_reasons = validation.reasons or []
+        from quant_core.spline import CubicSplineCurve
+        curve_fn = CubicSplineCurve(tenors, yields).evaluate
+    validation_rmse = validation.rmse
+    validation_passed = validation.passed
+    validation_reasons = validation.reasons or []
 
-    zc = build_zero_curve_from_zero_rates(curve_fn, 40.0, 0.5) if yield_type == "zero_coupon" \
-        else bootstrap_zero_curve(curve_fn, 40.0, 0.5)
+    zc = bootstrap_zero_curve(curve_fn, 40.0, 0.5)
 
     # Check if already archived for this date
     existing = db.query(CurveCalibration).filter(

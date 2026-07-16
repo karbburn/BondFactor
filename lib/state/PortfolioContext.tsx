@@ -50,8 +50,9 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     try { setCompareIds(JSON.parse(localStorage.getItem('compareIds') || '[]')); } catch {}
     const savedId = localStorage.getItem('activePortfolioId');
     if (savedId) {
-      // Defer loadPortfolio until securities are available
+      let cancelled = false;
       const tryLoad = () => {
+        if (cancelled) return;
         if (securitiesRef.current.length > 0) {
           loadPortfolio(savedId).catch(() => localStorage.removeItem('activePortfolioId'));
         } else {
@@ -59,6 +60,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         }
       };
       tryLoad();
+      return () => { cancelled = true; };
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

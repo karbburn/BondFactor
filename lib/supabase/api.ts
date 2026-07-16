@@ -1,7 +1,7 @@
 import { getSupabase } from './client';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function apiFetch(path: string, options: RequestInit = {}): Promise<any> {
+export async function apiFetch<T = any>(path: string, options: RequestInit = {}): Promise<T> {
   const supabase = getSupabase();
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token;
@@ -13,6 +13,6 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
     const body = await res.json().catch(() => ({}));
     throw new Error(body?.error?.message || `API error ${res.status}`);
   }
-  if (res.status === 204) return null;
+  if (res.status === 204) return null as T;
   return res.json();
 }

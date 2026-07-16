@@ -48,6 +48,19 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try { setCompareIds(JSON.parse(localStorage.getItem('compareIds') || '[]')); } catch {}
+    const savedId = localStorage.getItem('activePortfolioId');
+    if (savedId) {
+      // Defer loadPortfolio until securities are available
+      const tryLoad = () => {
+        if (securitiesRef.current.length > 0) {
+          loadPortfolio(savedId).catch(() => localStorage.removeItem('activePortfolioId'));
+        } else {
+          setTimeout(tryLoad, 100);
+        }
+      };
+      tryLoad();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const { securities } = useCurve();
   const securitiesRef = useRef(securities);
@@ -96,6 +109,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
 
   const clearActivePortfolio = useCallback(() => {
     setActivePortfolioId(null);
+    localStorage.removeItem('activePortfolioId');
     // Generate unique default name based on existing saved portfolios
     const existingNames = new Set(savedPortfolios.map(p => p.portfolio_name));
     const candidate = "Portfolio";
@@ -139,6 +153,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     });
 
     setActivePortfolioId(portfolioId);
+    localStorage.setItem('activePortfolioId', portfolioId);
     await fetchSavedPortfolios();
     return { id: portfolioId };
   }, [activePortfolioId, activePortfolioName, portfolio, fetchSavedPortfolios]);
@@ -147,6 +162,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     const data = await apiFetch(`/api/v1/portfolios/${portfolioId}`);
     setActivePortfolioId(data.id);
     setActivePortfolioName(data.portfolio_name);
+    localStorage.setItem('activePortfolioId', data.id);
 
     // Use ref to always read latest securities, avoiding stale closure on initial load
     const currentSecurities = securitiesRef.current;

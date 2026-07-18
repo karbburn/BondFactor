@@ -11,6 +11,7 @@ import csv
 import io
 import re
 import sys
+import time
 import zipfile
 from datetime import date, datetime
 from collections import defaultdict
@@ -36,46 +37,62 @@ def _map_bond_tenor(security: str, trade_year: int) -> tuple[float, str] | None:
     return (float(tenor), label)
 
 
+MAX_RETRIES = 3
+RETRY_BACKOFF = [5, 15, 30]
+
+
 def fetch_wdm_yields() -> tuple[list[dict], date]:
     """Fetch WDM daily trade data, filter GOI bonds + T-bills, return yield observations."""
     from curl_cffi import requests as cffi_requests
 
     session = cffi_requests.Session(impersonate="chrome")
-    warmup = session.get("https://www.nseindia.com/", timeout=15)
-    if warmup.status_code != 200:
-        raise RuntimeError(f"NSE warm-up failed: {warmup.status_code}")
-
     headers = {"Referer": "https://www.nseindia.com/all-reports-debt"}
 
-    resp = session.get("https://www.nseindia.com/api/daily-reports?key=WDM", headers=headers, timeout=10)
-    if resp.status_code != 200:
-        raise RuntimeError(f"WDM reports API returned {resp.status_code}")
+    last_err = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            warmup = session.get("https://www.nseindia.com/", timeout=30)
+            if warmup.status_code != 200:
+                raise RuntimeError(f"NSE warm-up failed: {warmup.status_code}")
 
-    reports = resp.json()
+            resp = session.get("https://www.nseindia.com/api/daily-reports?key=WDM", headers=headers, timeout=30)
+            if resp.status_code != 200:
+                raise RuntimeError(f"WDM reports API returned {resp.status_code}")
 
-    # Grab whatever's latest — CurrentDay if published, PreviousDay as fallback
-    download_url = None
-    for day_key in ["CurrentDay", "PreviousDay"]:
-        for report in reports.get(day_key, []):
-            if report.get("displayName", "").startswith("Daily Report"):
-                download_url = report["filePath"] + report["fileActlName"]
-                break
-        if download_url:
-            break
+            reports = resp.json()
 
-    if not download_url:
-        raise RuntimeError("No WDM daily report found")
+            download_url = None
+            for day_key in ["CurrentDay", "PreviousDay"]:
+                for report in reports.get(day_key, []):
+                    if report.get("displayName", "").startswith("Daily Report"):
+                        download_url = report["filePath"] + report["fileActlName"]
+                        break
+                if download_url:
+                    break
 
-    # Download and extract
-    zip_resp = session.get(download_url, headers=headers, timeout=20)
-    if zip_resp.status_code != 200:
-        raise RuntimeError(f"Download failed: {zip_resp.status_code}")
+            if not download_url:
+                raise RuntimeError("No WDM daily report found")
 
-    with zipfile.ZipFile(io.BytesIO(zip_resp.content)) as z:
-        csv_name = next((f for f in z.namelist() if f.endswith("_sett.csv")), None)
-        if not csv_name:
-            raise RuntimeError(f"No settlement CSV in ZIP: {z.namelist()}")
-        csv_content = z.read(csv_name).decode("utf-8")
+            zip_resp = session.get(download_url, headers=headers, timeout=60)
+            if zip_resp.status_code != 200:
+                raise RuntimeError(f"Download failed: {zip_resp.status_code}")
+
+            with zipfile.ZipFile(io.BytesIO(zip_resp.content)) as z:
+                csv_name = next((f for f in z.namelist() if f.endswith("_sett.csv")), None)
+                if not csv_name:
+                    raise RuntimeError(f"No settlement CSV in ZIP: {z.namelist()}")
+                csv_content = z.read(csv_name).decode("utf-8")
+
+            break  # success — exit retry loop
+
+        except Exception as e:
+            last_err = e
+            if attempt < MAX_RETRIES - 1:
+                wait = RETRY_BACKOFF[attempt]
+                print(f"Attempt {attempt+1} failed: {e} — retrying in {wait}s...", file=sys.stderr)
+                time.sleep(wait)
+                continue
+            raise
 
     # Parse CSV — single pass: aggregate yields + extract trade date
     reader = csv.DictReader(io.StringIO(csv_content))

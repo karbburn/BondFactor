@@ -14,15 +14,20 @@ jobs:
       - name: Trigger Backend Ingestion Endpoint
         run: |
           echo "Triggering ingestion on deployed backend..."
-          # The backend base URL is retrieved from GitHub Secrets (e.g., API_BASE_URL)
-          # The request is authenticated using INTERNAL_SERVICE_KEY
-          curl -X POST "${{ secrets.API_BASE_URL }}/api/v1/internal/ingestion/trigger" \
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.API_BASE_URL }}/api/v1/internal/ingestion/trigger" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.INTERNAL_SERVICE_KEY }}" \
-            --fail-with-body
+            --retry 3 --retry-delay 5)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "HTTP $HTTP_CODE"
+          echo "$BODY"
+          if [ "$HTTP_CODE" -ge 400 ] 2>/dev/null; then
+            echo "::error::Backend returned HTTP $HTTP_CODE: $BODY"
+            exit 1
+          fi
         
       - name: Report Status
         if: failure()
         run: |
           echo "Error: Ingestion run failed. Check backend logs and GHA logs."
-          # Place failure notifications (e.g., webhook to Slack/Discord/Email) here in later phases

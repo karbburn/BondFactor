@@ -16,7 +16,7 @@ const nextConfig = {
               "img-src 'self' data:",
               "font-src 'self'",
               `connect-src 'self' ${apiBase} https://*.supabase.co wss://*.supabase.co`,
-              "frame-ancestors 'self' https://sourabh08.vercel.app",
+              "frame-ancestors 'self' https://sourabh08.vercel.app https://sourabhpradhan.in https://www.sourabhpradhan.in",
             ].join("; "),
           },
         ],

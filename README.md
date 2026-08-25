@@ -246,4 +246,4 @@ Proprietary. All rights reserved.
 
 ---
 
-Built by [Sourabh](https://sourabh08.vercel.app/)
+Built by [Sourabh](https://www.sourabhpradhan.in/)

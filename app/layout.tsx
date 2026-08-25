@@ -57,7 +57,7 @@ export default function RootLayout({
                           <span>|</span>
                           <Link href="/terms">Terms of Use</Link>
                         </div>
-                        <span>Built by <a href="https://sourabh08.vercel.app/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Sourabh</a></span>
+                        <span>Built by <a href="https://www.sourabhpradhan.in/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Sourabh</a></span>
                       </div>
                     </footer>
                   </div>

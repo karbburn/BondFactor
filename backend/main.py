@@ -16,7 +16,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "https://bondfactor.vercel.app,http://localhost:3000").split(",")
+ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "https://bondfactor.sourabhpradhan.in,https://bondfactor.vercel.app,http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,

@@ -4,7 +4,7 @@
 
 Fit the benchmark yield curve, deform it under economically meaningful scenarios, and see how a G-Sec portfolio responds — price, duration, DV01, convexity, Key Rate Duration, and scenario P&L.
 
-[![Live](https://img.shields.io/badge/Live-bondfactor.vercel.app-blue)](https://bondfactor.vercel.app)
+[![Live](https://img.shields.io/badge/Live-bondfactor.sourabhpradhan.in-blue)](https://bondfactor.sourabhpradhan.in/)
 [![API](https://img.shields.io/badge/API-bondfactor--api.onrender.com-green)](https://bondfactor-api.onrender.com)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12+-yellow)](https://python.org)
 [![Next.js 14](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org)

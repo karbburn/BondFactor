@@ -1,8 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import React from "react";
 import Link from "next/link";
 import { JetBrains_Mono, Outfit } from "next/font/google";
+
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "../lib/site";
 
 import { CurveProvider } from "../lib/state/CurveContext";
 import { PortfolioProvider } from "../lib/state/PortfolioContext";
@@ -25,8 +27,98 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "BondFactor | Fixed Income Risk Engine",
-  description: "Indian G-Sec yield curve deformation and risk analytics engine.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "BondFactor | Fixed Income Risk Engine for Indian G-Secs",
+    template: "%s | BondFactor",
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  category: "Finance",
+  keywords: [
+    "BondFactor",
+    "Indian Government Securities",
+    "G-Sec",
+    "G-Sec yield curve",
+    "Nelson-Siegel-Svensson",
+    "NSS calibration",
+    "bond risk analytics",
+    "duration",
+    "DV01",
+    "convexity",
+    "Key Rate Duration",
+    "scenario analysis",
+    "fixed income India",
+    "FBIL par yields",
+  ],
+  authors: [{ name: "Sourabh", url: "https://www.sourabhpradhan.in/" }],
+  creator: "Sourabh",
+  publisher: "BondFactor",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: "BondFactor | Fixed Income Risk Engine for Indian G-Secs",
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "BondFactor | Fixed Income Risk Engine for Indian G-Secs",
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0e0f13",
+  width: "device-width",
+  initialScale: 1,
+};
+
+const JSON_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      description: SITE_DESCRIPTION,
+      publisher: { "@id": `${SITE_URL}/#organization` },
+    },
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      founder: {
+        "@type": "Person",
+        name: "Sourabh",
+        url: "https://www.sourabhpradhan.in/",
+      },
+    },
+    {
+      "@type": "SoftwareApplication",
+      name: SITE_NAME,
+      url: SITE_URL,
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Web",
+      description: SITE_DESCRIPTION,
+    },
+  ],
 };
 
 export default function RootLayout({
@@ -36,6 +128,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${outfit.variable} ${jetbrainsMono.variable}`}>
+      <head>
+        <link rel="canonical" href={SITE_URL} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
+        />
+      </head>
       <body>
         <AuthProvider>
           <CurveProvider>

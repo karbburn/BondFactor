@@ -194,16 +194,16 @@ export default function Dashboard() {
                   </tr>,
                   isExpanded && (
                     <tr key={`${pos.security.isin}-expanded`} className="expanded-row-tr" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                      <td colSpan={11} style={{ padding: '12px', borderLeft: '3px solid var(--accent)' }}>
+                      <td colSpan={11} className="expanded-krs-cell" style={{ padding: '12px', borderLeft: '3px solid var(--accent)', backgroundColor: 'var(--bg-secondary)', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
                         <div style={{ fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', fontSize: '10px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
                           Key-Rate Tenor-Bucket Risk Sensitivities (KRS in ₹)
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '10px' }}>
+                        <div className="expanded-krs-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '10px' }}>
                           {DEFAULT_KEY_TENORS.map((t, idx) => {
                             const krdVal = pos.krd[idx] || 0;
                             const krsVal = krdVal * pos.baseDirtyPrice * 0.0001 * (pos.faceValue / 100.0);
                             return (
-                              <div key={t} style={{ padding: '4px 6px', border: '1px solid var(--border-subtle)', borderRadius: '2px', display: 'flex', justifyContent: 'space-between' }}>
+                              <div key={t} className="expanded-krs-item" style={{ padding: '4px 6px', border: '1px solid var(--border-subtle)', borderRadius: '2px', display: 'flex', justifyContent: 'space-between', gap: '6px', minWidth: 0 }}>
                                 <span style={{ color: 'var(--text-secondary)' }}>{t < 1 ? `${t * 12}M` : `${t}Y`}:</span>
                                 <span className={krsVal >= 0 ? 'text-success' : 'text-error'} style={{ fontWeight: 600 }}>
                                   ₹ {Math.round(krsVal).toLocaleString()}
@@ -212,7 +212,7 @@ export default function Dashboard() {
                             );
                           })}
                         </div>
-                        <div style={{ marginTop: '8px', fontSize: '9px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+                        <div className="expanded-krs-note" style={{ marginTop: '8px', fontSize: '9px', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
                           * Total KRS Sum: ₹ {Math.round(pos.krd.reduce((acc, v) => acc + v, 0) * pos.baseDirtyPrice * 0.0001 * (pos.faceValue / 100.0)).toLocaleString()} | Position Parallel DV01: ₹ {Math.round(pos.dv01 * (pos.faceValue / 100.0)).toLocaleString()} (Reconciled!)
                         </div>
                       </td>

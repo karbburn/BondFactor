@@ -634,6 +634,27 @@ body {
   color: var(--text-secondary);
 }
 
+/* --- Expanded KRS detail row (dashboard) --- */
+
+.expanded-row-tr td.expanded-krs-cell {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+.expanded-krs-grid {
+  min-width: 0;
+}
+
+.expanded-krs-item {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.expanded-krs-note {
+  overflow-wrap: anywhere;
+}
+
 /* --- Alerts --- */
 
 .alert-error {
@@ -947,5 +968,10 @@ body {
   .dense-table th:nth-child(6), .dense-table td:nth-child(6),
   .dense-table th:nth-child(8), .dense-table td:nth-child(8) {
     display: none;
+  }
+
+  .expanded-krs-grid {
+    /* !important required to override the inline gridTemplateColumns on the element */
+    grid-template-columns: repeat(2, 1fr) !important;
   }
 }
